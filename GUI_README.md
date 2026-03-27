@@ -1,136 +1,263 @@
-# GUI Frontend User Guide
+# GUI Frontend User Guide (Step by Step)
 
-This guide explains how to use the frontend application step by step, starting from login.
+Yeh guide frontend ke har important page ka practical usage batati hai: page me kya hota hai aur use kaise karna hai.
 
-## 1. Open the Frontend
+## 1. App Start Karna
 
-1. Start backend server.
-2. Start frontend server.
-3. Open browser at: http://localhost:5174
+1. Backend run karein.
+2. Frontend run karein.
+3. Browser me http://localhost:5174 open karein.
 
-## 2. Login Flow
+## 2. Login Page (/login)
 
-1. Login page appears first.
-2. Enter email and password.
-3. Click Login.
-4. On successful login, you are redirected to Dashboard.
+### Page me kya hai
+1. Email input
+2. Password input
+3. Login button
 
-If login fails:
-1. Verify backend server is running.
-2. Verify credentials.
-3. Check backend CORS and frontend API URL settings.
+### Kaise use karein
+1. Valid email aur password enter karein.
+2. Login click karein.
+3. Success par app Dashboard par redirect karega.
+4. Error aaye to credentials, backend status, aur API URL verify karein.
 
-## 3. Dashboard Usage
+## 3. Dashboard (/dashboard)
 
-Dashboard is the entry page for monitoring and quick actions.
+### Page me kya hai
+1. KPI cards: total, pending, implemented, rejected
+2. Recent changes list/table
+3. Quick actions: New Change Request, View All Requests
 
-You can:
-1. View total change requests.
-2. View pending review and pending approval counts.
-3. View implemented and rejected summary.
-4. Open recent change requests table.
-5. Use quick buttons:
-   - New Change Request
-   - View All Requests
+### Kaise use karein
+1. Top summary se system health check karein.
+2. Recent rows se latest requests open karein.
+3. New request banani ho to New Change Request click karein.
+4. Puri list dekhni ho to View All Requests click karein.
 
-## 4. Create New Change Request
+## 4. Create Change Request Page (/create)
 
-1. Click New Change Request from Dashboard or sidebar.
-2. Fill mandatory fields:
-   - 4M type
-   - Title
-   - Description
-   - Department
-   - Risk level
-   - Current state and proposed change
-3. Add extra details based on selected type.
-4. Submit request.
+### Page me kya hai
+1. 4M type selection
+2. Core fields: title, description, department, risk
+3. Current vs proposed change fields
+4. Type-specific business fields
+5. Submit action
 
-## 5. Change List Page
+### Kaise use karein
+1. Pehle 4M type choose karein.
+2. Mandatory fields fill karein.
+3. Impact/reason aur supporting details add karein.
+4. Submit karein aur success toast verify karein.
 
-1. Open Change List from sidebar or View All Requests.
-2. Use filters for status, type, and search.
-3. Open any request to view full details.
-4. Depending on permission, you can edit request details.
+## 5. Change List Page (/changes)
 
-## 6. Approvals Flow
+### Page me kya hai
+1. Search and filters (status, type, department, etc.)
+2. Sorted/paginated request list
+3. Row actions for open/view/edit (permission based)
 
-1. Open Approvals page.
-2. Review pending requests.
-3. Open a request detail.
-4. Approve or Reject with remarks.
-5. Status updates appear in dashboard and list pages.
+### Kaise use karein
+1. Filters lagake relevant requests shortlist karein.
+2. Request row open karke details dekhein.
+3. Permission ho to update actions use karein.
 
-## 7. Masters Page
+## 6. Request Detail Page (/changes/:id)
 
-Use Masters page to maintain all dropdown and matrix data.
+### Page me kya hai
+1. Full request details
+2. Approval history/status
+3. Attachments and audit context
 
-Main usage:
-1. Select tab from Master Navigator.
-2. Add entry using Name, Type (if required), and Status.
-3. Edit, Activate/Deactivate, or Delete entries.
-4. Use bulk select and bulk activate/deactivate.
-5. For machine/operator/subtype tabs, mapped skills are visible in table.
+### Kaise use karein
+1. Request list se detail page open karein.
+2. Data verify karein.
+3. Attachments dekh kar implementation/approval decision support lein.
 
-## 8. Guided Setup Page
+## 7. Approvals Page (/approvals)
 
-1. Open Guided Setup from Masters page.
-2. Choose one 4M type.
-3. Fill step form using mapping fields.
-4. Click Go To Preview.
-5. Verify all data in preview modal.
-6. Click Final Submit.
-7. Form resets for next entry.
+### Page me kya hai
+1. Pending approval requests
+2. Approval decision actions
 
-## 9. Users and Roles
+### Kaise use karein
+1. Pending item select karein.
+2. Request context check karein.
+3. Approve ya Reject with remarks karein.
+4. Updated status dashboard/change list me confirm karein.
 
-Available to authorized roles only.
+## 8. Review Page (/reviews)
 
-1. Manage users from Users page.
-2. Manage roles and permissions from Roles page.
-3. Ensure dashboard and change permissions are assigned properly.
+### Page me kya hai
+1. Review queue for approver roles
+2. Quick drill-down and decision flow
 
-## 10. Reports and Monitoring
+### Kaise use karein
+1. Review list me highest priority item open karein.
+2. Impact/requirement/reason verify karein.
+3. Approval decision complete karein.
 
-1. Open reports/monitoring pages from sidebar.
-2. Track progress, status distribution, and audit behavior.
+## 9. Implementation Page (/implementation)
 
-## 11. Logout
+### Page me kya hai
+1. Approved requests for execution
+2. Implementation status update actions
 
-1. Use logout action from navbar/user menu.
-2. Session token is cleared and user returns to login page.
+### Kaise use karein
+1. Approved request choose karein.
+2. Implementation details fill/update karein.
+3. Status ko implemented direction me move karein.
 
-## 12. Permission Notes
+## 10. Monitoring Page (/monitoring)
 
-Feature access depends on role permissions:
-1. SuperAdmin has full access.
-2. Other roles require explicit permissions like:
-   - dashboard.view
-   - changes.read/create/update/delete
-   - approvals.approve
-   - users and roles permissions
+### Page me kya hai
+1. Post-implementation tracking data
+2. Outcome/observation fields
 
-If a page is not opening, ask admin to update role permissions.
+### Kaise use karein
+1. Implemented request select karein.
+2. Monitoring observations and metrics update karein.
+3. Quality/cost/safety impact trend verify karein.
 
-## 13. Quick Troubleshooting for GUI
+## 11. Reports Page (/reports)
 
-1. Blank or no data on dashboard:
-   - Check backend running on port 5000.
-   - Verify frontend API URL.
-   - Check role permission for dashboard and changes.
-2. Login redirect loop:
-   - Token expired or invalid. Login again.
-3. CORS issue:
-   - Verify backend CORS_ORIGIN matches frontend URL.
-4. Master data not visible:
-   - Refresh page and verify category/type filters.
+### Page me kya hai
+1. Analytical summaries
+2. Status/type level reporting views
 
-## 14. Recommended First-Time User Path
+### Kaise use karein
+1. Required filter range choose karein.
+2. Report output review karein.
+3. Decision support ke liye export/share workflow follow karein (if available).
 
-1. Login
-2. Open Dashboard
-3. Open Masters and verify required master data
-4. Run Guided Setup for mapping
-5. Create first change request
-6. Complete approval cycle
-7. Track updates in Dashboard
+## 12. Masters Page (/masters)
+
+### Page me kya hai
+1. Master Navigator tabs
+2. Add/Edit/Delete entries
+3. Status activation/deactivation
+4. Search, status filter, type filter
+5. Bulk select and bulk status update
+6. Mapped skills visibility (machine/operator/subtype rows)
+
+### Kaise use karein (step by step)
+1. Left navigator se tab select karein.
+2. Agar tab me type required hai to type choose karein.
+3. Name field me single ya comma/newline separated multiple values daalein.
+4. Add Entry click karein.
+5. Table me search/filter lagakar entry validate karein.
+6. Zarurat par Edit, Activate/Deactivate, Delete use karein.
+7. Bulk operation ke liye rows select karke Activate Selected ya Deactivate Selected karein.
+8. Machine/Operator/Change Subtypes tabs me Mapped Skills column se mapping quickly validate karein.
+
+## 13. Guided Setup Page (/guided-setup)
+
+### Page me kya hai
+1. Type-wise guided mapping flow
+2. Step data save and progress tracking
+3. Preview modal + final submit
+
+### Kaise use karein
+1. 4M type select karein.
+2. Step fields fill karein (mapping + skill selection).
+3. Go To Preview click karein.
+4. Modal me data verify karein.
+5. Edit karna ho to modal close karein aur fields update karein.
+6. Final Submit karein.
+7. Submit ke baad flow reset state verify karein.
+
+## 14. Master Categories Page (/master-categories)
+
+### Page me kya hai
+1. 4M category reference listing
+2. Dropdown preview by selected 4M type
+
+### Kaise use karein
+1. Main category type switch karein.
+2. Subcategory options preview karein.
+3. Isse Create/Guided forms ke expected category structure verify karein.
+
+## 15. Users Page (/users)
+
+### Page me kya hai
+1. User list
+2. Create/update/delete user actions
+3. Role assignment controls
+
+### Kaise use karein
+1. New user create karein with role.
+2. Existing user details update karein.
+3. Unauthorized or inactive user cleanup karein.
+
+## 16. Roles Pages
+
+### 16.1 Roles List (/roles)
+1. Existing roles list dekhein.
+2. Role detail open karein.
+3. Naya role create flow start karein.
+
+### 16.2 Role Create (/roles/create)
+1. Role name enter karein.
+2. Permissions select karein.
+3. Save karein.
+
+### 16.3 Role View (/roles/:id)
+1. Role info and permissions inspect karein.
+2. Edit route par move karein if needed.
+
+### 16.4 Role Edit (/roles/:id/edit)
+1. Permissions update karein.
+2. Save and validate access changes.
+
+## 17. Permission Matrix Page (/roles/permissions)
+
+### Page me kya hai
+1. Permissions grid by role
+2. Centralized permission management view
+
+### Kaise use karein
+1. Role row select karein.
+2. Required permissions enable/disable karein.
+3. Save karein aur affected user se login karke verify karein.
+
+## 18. Navbar and Sidebar Usage
+
+1. Sidebar se modules me quickly switch karein.
+2. Navbar se session actions (including logout) perform karein.
+3. Access-controlled routes role ke hisab se show/hide ho sakte hain.
+
+## 19. Logout
+
+1. Navbar se logout karein.
+2. Token clear ho jata hai.
+3. App login page par redirect hoti hai.
+
+## 20. Permission Reference (High Level)
+
+1. Dashboard: dashboard.view
+2. Change list/details: changes.read
+3. Create request: changes.create
+4. Update implementation/monitoring: changes.update
+5. Approvals: approvals.approve
+6. Users: users.read and related user permissions
+7. Roles: roles.read/roles.create/roles.update
+
+## 21. Common GUI Issues and Fix
+
+1. Dashboard me data nahi aa raha: backend up hai ya nahi check karein.
+2. Dashboard me data nahi aa raha: frontend env me API URL check karein.
+3. Dashboard me data nahi aa raha: permission mismatch check karein.
+4. Login ke baad wapas login page aata hai: token invalid/expired ho sakta hai, re-login karein.
+5. Masters me list blank: category/type/status filters clear karein.
+6. Masters me list blank: role permission verify karein.
+7. CORS error: backend .env me CORS_ORIGIN ko frontend URL se match karein.
+
+## 22. Recommended End-to-End User Journey
+
+1. Login karein.
+2. Dashboard se current system state samjhein.
+3. Masters me required base data prepare karein.
+4. Guided Setup se mapping quickly complete karein.
+5. New change request create karein.
+6. Review and approval cycle complete karein.
+7. Implementation and monitoring update karein.
+8. Reports se final analysis check karein.
