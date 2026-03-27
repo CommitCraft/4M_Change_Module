@@ -1,140 +1,201 @@
-# 4M Change Management System - Setup Guide
-
-## System Requirements
-
-- Node.js (v16 or higher)
-- MySQL (v5.7 or higher)
-- npm or yarn
 # 4M Change Management System
 
-Production-ready full-stack 4M change workflow platform for manufacturing environments.
+Complete full-stack 4M change workflow platform for manufacturing operations.
 
-## Tech Stack
+## 1. What This Project Does
 
-- Frontend: React (Vite), Tailwind CSS, Axios, React Router, Chart.js
-- Backend: Node.js, Express, Sequelize ORM (MySQL), JWT, RBAC, Multer
+- Manage 4M change requests: Man, Machine, Method, Material
+- Role-based workflow: SuperAdmin, Admin, Manager, User
+- Approval lifecycle with audit trail
+- Dashboard for monitoring and actions
+- Master data management with skill mappings
+- Guided setup for master data
 
-## Core Capabilities
+## 2. Tech Stack
 
-- JWT authentication with protected routes
-- RBAC roles: SuperAdmin, Admin, Manager, User
-- Idempotent SuperAdmin auto-bootstrap on server start
-- Change lifecycle: Create -> Approve -> Implement -> Audit
-- 4M categories: Man, Machine, Method, Material
-- Transactional approval flow with audit logs
-- File attachments served from /uploads
-- Dashboard analytics and recent activity
-- Search, filters, pagination, sort, role-based listing
-- Dark mode and toast notifications
+- Frontend: React + Vite + Tailwind + Axios
+- Backend: Node.js + Express + Sequelize + MySQL
+- Auth: JWT
+- Uploads: Multer
 
-## Project Structure
+## 3. Prerequisites (From Scratch)
 
-```
-4M_Module/
-    backend/
-        src/
-            config/
-            controllers/
-            middleware/
-            models/
-            routes/
-            utils/
-            server.js
-    frontend/
-        src/
-            components/
-            context/
-            pages/
-            services/
-            utils/
-            App.jsx
-    docs/
-        API_DOCUMENTATION.md
-        schema.sql
-        seed_data.sql
-        POSTMAN_COLLECTION.json
+- Node.js 18+ (recommended)
+- npm 9+
+- MySQL 8+ (or compatible)
+- Git
+
+Check versions:
+
+```bash
+node -v
+npm -v
+mysql --version
 ```
 
-## Environment
+## 4. Clone and Open Project
 
-Backend env file: backend/.env
-
-```
-SUPERADMIN_EMAIL=superadmin@example.com
-SUPERADMIN_PASSWORD=Super@123
-
-JWT_SECRET=your_secret_key
-JWT_EXPIRE=7d
-
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=
-DB_NAME=change_management
-DB_PORT=3306
-
-PORT=5000
-NODE_ENV=development
-CORS_ORIGIN=http://localhost:5173
-UPLOAD_PATH=./uploads
-MAX_FILE_SIZE=10485760
+```bash
+git clone <your-repo-url>
+cd 4M_Module
 ```
 
-## Setup
+## 5. Create Environment Files
 
-1. Create database in MySQL:
+Do not commit real secrets. Use examples below:
+
+- backend/.env.example
+- frontend/.env.example
+
+Create local working env files:
+
+Windows (PowerShell):
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+Copy-Item frontend/.env.example frontend/.env
+```
+
+Mac/Linux/Git Bash:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+Then update values inside backend/.env (DB user/password, JWT secret, etc.).
+
+## 6. Database Setup
+
+Create DB:
 
 ```sql
 CREATE DATABASE IF NOT EXISTS change_management;
 ```
 
-2. Install backend dependencies:
+Optional: run provided SQL docs manually if needed:
+
+- docs/schema.sql
+- docs/seed_data.sql
+
+Note: backend bootstrap also creates required tables and default master records.
+
+## 7. Install Dependencies
+
+Backend:
 
 ```bash
 cd backend
 npm install
 ```
 
-3. Start backend:
-
-```bash
-npm run dev
-```
-
-4. Install frontend dependencies:
+Frontend:
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-5. Start frontend:
+## 8. Run the Application
+
+Start backend (Terminal 1):
 
 ```bash
+cd backend
 npm run dev
 ```
 
-## Startup Behavior
+Start frontend (Terminal 2):
 
-On backend startup, Sequelize syncs all models and then:
+```bash
+cd frontend
+npm run dev
+```
 
-1. Ensures all roles exist
-2. Ensures SuperAdmin from env exists
-3. Hashes SuperAdmin password via bcrypt hooks
+Default URLs:
 
-The process is idempotent and safe to run repeatedly.
+- Frontend: http://localhost:5174
+- Backend: http://localhost:5000
+- Health check: http://localhost:5000/health
 
-## API Summary
+## 9. First Login (Step by Step)
 
-- Auth: POST /api/auth/login, GET /api/auth/profile
-- Users: GET/POST/PUT/DELETE /api/users
-- Change Requests: POST/GET/GET:id/PUT:id/DELETE:id /api/change
-- Approval: POST /api/approval, GET /api/approval/:request_id
-- Files: POST /api/files/:id/upload, GET /api/files/request/:id, GET /api/files/:filename, DELETE /api/files/:id
+1. Open frontend URL.
+2. Login using SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD from backend/.env.
+3. Go to Masters page and validate basic master data.
+4. Create a change request.
+5. Review/approve based on role permissions.
+6. Track in Dashboard.
 
-See docs/API_DOCUMENTATION.md for complete payload and response examples.
+## 10. Core Functional Flow (User Guideline)
 
-## Build Status
+1. Authentication:
+- Login from Login page.
 
-- Frontend production build: successful
-- Backend is configured and uses Sequelize sync; runtime requires valid MySQL credentials in backend/.env
-- Email: `manager@example.com`
+2. Masters Setup:
+- Add departments, machines, operators, skills.
+- Add mapping tabs (Machine Skill Matrix, Operator Skills, Method/Material Skill Matrix).
+
+3. Guided Setup:
+- Use guided page to configure mapping and requirements quickly.
+
+4. Create Change Request:
+- Fill 4M details, impact, risk, and submit.
+
+5. Approval Workflow:
+- Approvers review and approve/reject.
+
+6. Implementation + Monitoring:
+- Update implementation state and monitor results.
+
+7. Reports and Audit:
+- Use dashboard/reports and audit logs for traceability.
+
+## 11. API Summary
+
+- Auth: /api/auth/*
+- Users: /api/users/*
+- Roles: /api/roles/*
+- Changes: /api/change/*
+- Approvals: /api/approval/*
+- Files: /api/files/*
+- Masters: /api/masters/*
+- Guided Setup: /api/guided-setup/*
+
+For full request/response examples see docs/API_DOCUMENTATION.md.
+
+## 12. Troubleshooting
+
+1. Frontend not connecting to backend:
+- Check frontend/.env VITE_API_BASE_URL.
+- Check backend running on correct port.
+
+2. CORS error:
+- Check backend/.env CORS_ORIGIN matches frontend URL.
+
+3. DB connection error:
+- Verify DB_HOST, DB_USER, DB_PASS, DB_NAME, DB_PORT.
+
+4. Unauthorized or redirects to login:
+- Token may be expired/invalid; login again.
+- Verify role permissions.
+
+## 13. Security Notes
+
+- Never commit real .env files.
+- Rotate JWT_SECRET for production.
+- Use strong SUPERADMIN_PASSWORD.
+- Set NODE_ENV=production and proper secure DB configuration in production.
+
+## 14. Repository Files You Should Commit
+
+- README.md
+- backend/.env.example
+- frontend/.env.example
+
+Do not commit:
+
+- backend/.env
+- frontend/.env
+- node_modules
+- runtime logs
