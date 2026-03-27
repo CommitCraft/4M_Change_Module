@@ -5,6 +5,7 @@ import {
   createUserValidation,
   idParamValidation,
   updateUserValidation,
+  updateSelfValidation,
   validateRequest,
 } from '../middleware/validators.js';
 
@@ -14,6 +15,9 @@ router.use(authMiddleware);
 
 router.get('/', authorizePermissions('users.read'), getUsers);
 router.post('/', authorizePermissions('users.create'), createUserValidation, validateRequest, createUser);
+// Self profile update route (no users.update permission required)
+router.put('/me', updateSelfValidation, validateRequest, updateUser);
+// Admin update route
 router.put('/:id', authorizePermissions('users.update'), updateUserValidation, validateRequest, updateUser);
 router.delete('/:id', authorizePermissions('users.delete'), idParamValidation, validateRequest, deleteUser);
 

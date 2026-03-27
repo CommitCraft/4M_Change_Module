@@ -64,8 +64,15 @@ export const updateUser = async (req, res) => {
     const { id } = req.params;
     const { name, email, password, role } = req.body;
 
+    // If user is updating their own profile, allow name, email, password update, but not role
     if (Number(id) === req.user.id && req.user.role !== 'SuperAdmin') {
-      return sendError(res, 403, 'Only SuperAdmin can update their own account details here');
+      if (role) {
+        return sendError(res, 403, 'You are not allowed to change your role');
+      }
+      // Only allow name, email, password update for self
+    } else if (Number(id) !== req.user.id && req.user.role !== 'SuperAdmin') {
+      // Only SuperAdmin can update other users
+      return sendError(res, 403, 'Only SuperAdmin can update other users');
     }
 
     const user = await User.scope('withPassword').findByPk(id, {

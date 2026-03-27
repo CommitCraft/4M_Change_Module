@@ -2,6 +2,7 @@ import React from 'react';
 import { useAuth } from '../context/AuthContext';
 import { AiOutlineMenu } from 'react-icons/ai';
 import { MdDarkMode, MdLogout } from 'react-icons/md';
+import { FaUserCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = ({ toggleSidebar }) => {
@@ -12,6 +13,21 @@ const Navbar = ({ toggleSidebar }) => {
     logout();
     navigate('/login');
   };
+
+  // Dropdown state
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const profileRef = React.useRef();
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <nav className="bg-white dark:bg-gray-900 shadow-md sticky top-0 z-50">
@@ -41,14 +57,29 @@ const Navbar = ({ toggleSidebar }) => {
             <MdDarkMode />
           </button>
 
-          <div className="flex items-center gap-4">
-            <span className="text-gray-700 dark:text-gray-300 font-medium">{user?.name}</span>
+          {/* Profile Dropdown */}
+          <div className="relative" ref={profileRef}>
             <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-gray-800 rounded-lg transition"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+              onClick={() => setDropdownOpen((v) => !v)}
             >
-              <MdLogout /> Logout
+              <FaUserCircle className="text-2xl text-gray-500 dark:text-gray-300" />
+              <span className="text-gray-700 dark:text-gray-300 font-medium">{user?.name}</span>
             </button>
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg py-2 z-50 border border-gray-100 dark:border-gray-700">
+                <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                  <div className="font-semibold text-gray-800 dark:text-gray-100">{user?.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{user?.role}</div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 w-full px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-gray-700 rounded-b-lg transition text-left"
+                >
+                  <MdLogout /> Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

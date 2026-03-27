@@ -63,6 +63,7 @@ export const userService = {
   getUsers: () => api.get('/users'),
   createUser: (payload) => withConfirmation('Create this user?', () => api.post('/users', payload)),
   updateUser: (id, payload) => withConfirmation('Update this user?', () => api.put(`/users/${id}`, payload)),
+  updateSelf: (payload) => api.put('/users/me', payload),
   deleteUser: (id) => withConfirmation('Delete this user?', () => api.delete(`/users/${id}`)),
 };
 

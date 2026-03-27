@@ -43,12 +43,21 @@ export const updateRoleValidation = [
     .withMessage('Invalid permission value'),
 ];
 
+
+// For /users/:id (admin update)
 export const updateUserValidation = [
   param('id').isInt({ min: 1 }).withMessage('Invalid user id'),
   body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
   body('email').optional().isEmail().withMessage('Invalid email'),
   body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').optional().trim().notEmpty().withMessage('Role cannot be empty'),
+];
+
+// For /users/me (self update)
+export const updateSelfValidation = [
+  body('name').optional().trim().notEmpty().withMessage('Name cannot be empty'),
+  body('email').optional().isEmail().withMessage('Invalid email'),
+  body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ];
 
 export const idParamValidation = [param('id').isInt({ min: 1 }).withMessage('Invalid id')];
