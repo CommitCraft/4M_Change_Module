@@ -82,6 +82,16 @@ const MASTER_TABS = [
   },
 ];
 
+const TAB_HINTS = {
+  machine: 'Machine list with mapped required skills.',
+  operator: 'Operator list with mapped assigned skills.',
+  change_subtype: 'Manage 4M subtypes. Method/Material subtype rows also show mapped skills.',
+  operator_skill_map: 'Map each operator to one or more skills.',
+  machine_skill_requirement: 'Define required skills for each machine.',
+  method_skill_map: 'Define required skills for each method subtype.',
+  material_skill_map: 'Define required skills for each material subtype.',
+};
+
 const MastersPage = () => {
   const { hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -91,6 +101,7 @@ const MastersPage = () => {
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(null);
   const [statusFilter, setStatusFilter] = useState('All');
+  const [typeFilter, setTypeFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [quickSubtypeName, setQuickSubtypeName] = useState('');
@@ -157,40 +168,94 @@ const MastersPage = () => {
     return [];
   };
 
-  const getMappedSkills = useCallback(
-    (mappingCategory, typeValue) => {
-      if (!typeValue) return [];
-      const seen = new Set();
-      return allMasters
-        .filter(
-          (row) =>
-            row.category === mappingCategory &&
-            row.type === typeValue &&
-            row.status === 'Active' &&
-            !seen.has(row.name.toLowerCase())
-        )
-        .map((row) => {
-          seen.add(row.name.toLowerCase());
-          return row.name;
-        });
+  const mappedSkillsIndex = useMemo(() => {
+    const categories = [
+      'machine_skill_requirement',
+      'operator_skill_map',
+      'method_skill_map',
+      'material_skill_map',
+    ];
+    const index = categories.reduce((acc, category) => {
+      acc[category] = {};
+      return acc;
+    }, {});
+
+    allMasters.forEach((row) => {
+      if (!categories.includes(row.category)) return;
+      if (row.status !== 'Active') return;
+      const typeKey = row.type || '';
+      if (!typeKey) return;
+
+      if (!index[row.category][typeKey]) {
+        index[row.category][typeKey] = [];
+      }
+
+      const existing = index[row.category][typeKey];
+      const lower = row.name.toLowerCase();
+      if (!existing.some((item) => item.toLowerCase() === lower)) {
+        existing.push(row.name);
+      }
+    });
+
+    return index;
+  }, [allMasters]);
+
+  const shouldShowMappedSkills =
+    activeConfig.category === 'machine' ||
+    activeConfig.category === 'operator' ||
+    activeConfig.category === 'change_subtype';
+
+  const getMappedSkillsForItem = useCallback(
+    (item) => {
+      if (activeConfig.category === 'machine') {
+        return mappedSkillsIndex.machine_skill_requirement[item.name] || [];
+      }
+      if (activeConfig.category === 'operator') {
+        return mappedSkillsIndex.operator_skill_map[item.name] || [];
+      }
+      if (activeConfig.category === 'change_subtype' && item.type === 'Method') {
+        return mappedSkillsIndex.method_skill_map[item.name] || [];
+      }
+      if (activeConfig.category === 'change_subtype' && item.type === 'Material') {
+        return mappedSkillsIndex.material_skill_map[item.name] || [];
+      }
+      return [];
     },
-    [allMasters]
+    [activeConfig.category, mappedSkillsIndex]
   );
 
   const currentRows = useMemo(() => {
     return allMasters
       .filter((row) => row.category === activeConfig.category)
       .filter((row) => (statusFilter === 'All' ? true : row.status === statusFilter))
+      .filter((row) => (typeFilter === 'All' ? true : (row.type || '') === typeFilter))
       .filter((row) => {
         if (!searchTerm.trim()) return true;
         const query = searchTerm.toLowerCase();
         return row.name.toLowerCase().includes(query) || (row.type || '').toLowerCase().includes(query);
       });
-  }, [allMasters, activeConfig, statusFilter, searchTerm]);
+  }, [allMasters, activeConfig, statusFilter, typeFilter, searchTerm]);
+
+  const availableTypeFilters = useMemo(() => {
+    if (!activeConfig.needsType) return [];
+    const unique = Array.from(
+      new Set(
+        allMasters
+          .filter((row) => row.category === activeConfig.category)
+          .map((row) => row.type)
+          .filter(Boolean)
+      )
+    );
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [allMasters, activeConfig]);
 
   useEffect(() => {
     setSelectedIds([]);
-  }, [activeTab, statusFilter, searchTerm]);
+  }, [activeTab, statusFilter, typeFilter, searchTerm]);
+
+  useEffect(() => {
+    setTypeFilter('All');
+  }, [activeTab]);
 
   useEffect(() => {
     setQuickSubtypeName('');
@@ -561,6 +626,9 @@ const MastersPage = () => {
             <section className="lg:col-span-9">
               <div className="mb-4">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-3">{activeConfig.key}</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                  {TAB_HINTS[activeConfig.category] || 'Manage entries for this master category.'}
+                </p>
                 <div className="grid md:grid-cols-5 gap-2">
                   {activeConfig.needsType && (
                     <select
@@ -625,7 +693,7 @@ const MastersPage = () => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Multiple names supported: comma ya new line se add karein.</p>
               </div>
 
-              <div className="mb-4 grid md:grid-cols-3 gap-2">
+              <div className={`mb-2 grid ${activeConfig.needsType ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-2`}>
                 <input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -641,10 +709,30 @@ const MastersPage = () => {
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                 </select>
-                <button type="button" className="btn-secondary" onClick={() => { setSearchTerm(''); setStatusFilter('All'); }}>
+                {activeConfig.needsType && (
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value)}
+                    className="input-field dark:bg-gray-800 dark:text-gray-200"
+                  >
+                    <option value="All">All {activeConfig.typeLabel || 'Types'}</option>
+                    {availableTypeFilters.map((typeValue) => (
+                      <option key={typeValue} value={typeValue}>
+                        {typeValue}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <button type="button" className="btn-secondary" onClick={() => { setSearchTerm(''); setStatusFilter('All'); setTypeFilter('All'); }}>
                   Clear Filters
                 </button>
               </div>
+
+              <p className="mb-3 text-xs text-gray-500 dark:text-gray-400">
+                Showing {currentRows.length} of {categorySummary.total} entries
+                {statusFilter !== 'All' ? ` | Status: ${statusFilter}` : ''}
+                {typeFilter !== 'All' ? ` | Type: ${typeFilter}` : ''}
+              </p>
 
               <div className="mb-4 flex flex-wrap items-center gap-2">
                 <button
@@ -711,26 +799,16 @@ const MastersPage = () => {
                         </th>
                         {activeConfig.needsType && <th>{activeConfig.typeLabel || 'Type'}</th>}
                         <th>Name</th>
-                        {(activeConfig.category === 'machine' || activeConfig.category === 'operator' || activeConfig.category === 'change_subtype') && <th>Mapped Skills</th>}
+                        {shouldShowMappedSkills && <th>Mapped Skills</th>}
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {currentRows.map((item) => (
-                        (() => {
-                          const mappedSkills =
-                            activeConfig.category === 'machine'
-                              ? getMappedSkills('machine_skill_requirement', item.name)
-                              : activeConfig.category === 'operator'
-                              ? getMappedSkills('operator_skill_map', item.name)
-                              : activeConfig.category === 'change_subtype' && item.type === 'Method'
-                              ? getMappedSkills('method_skill_map', item.name)
-                              : activeConfig.category === 'change_subtype' && item.type === 'Material'
-                              ? getMappedSkills('material_skill_map', item.name)
-                              : [];
+                      {currentRows.map((item) => {
+                        const mappedSkills = getMappedSkillsForItem(item);
 
-                          return (
+                        return (
                         <tr key={item.id}>
                           <td>
                             <input
@@ -741,7 +819,7 @@ const MastersPage = () => {
                           </td>
                           {activeConfig.needsType && <td>{item.type || '-'}</td>}
                           <td className="break-words max-w-[280px]">{item.name}</td>
-                          {(activeConfig.category === 'machine' || activeConfig.category === 'operator' || activeConfig.category === 'change_subtype') && (
+                          {shouldShowMappedSkills && (
                             <td className="max-w-[320px]">
                               {mappedSkills.length === 0 ? (
                                 <span className="text-xs text-gray-500 dark:text-gray-400">No skill mapped</span>
@@ -799,9 +877,8 @@ const MastersPage = () => {
                             </div>
                           </td>
                         </tr>
-                          );
-                        })()
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
