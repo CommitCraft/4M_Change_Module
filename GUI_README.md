@@ -213,11 +213,26 @@ Yeh guide frontend ke har important page ka practical usage batati hai: page me 
 ### Page me kya hai
 1. Permissions grid by role
 2. Centralized permission management view
+3. Permission search and group filter
+4. Role filter
+5. Unsaved role count and unsaved badges
+6. Reset Unsaved + Save All controls
+7. Role-wise Grant Group / Clear Group quick actions
+8. Global Grant/Clear selected group for all roles
+9. Change Preview panel (added/removed permissions before save)
 
 ### Kaise use karein
 1. Role row select karein.
 2. Required permissions enable/disable karein.
-3. Save karein aur affected user se login karke verify karein.
+3. Agar specific permission quickly dhoondhna hai to search box use karein.
+4. Group filter se module-wise permissions dekhein.
+5. Role filter se single role par focus karein.
+6. Unsaved badge wali rows ko Save se save karein, ya Save All use karein.
+7. Galat changes ho gaye ho to Reset Unsaved use karein.
+8. Kisi role ke liye ek poora module ek click me dena/hatana ho to row me group select karke Grant Group ya Clear Group use karein.
+9. Ek selected group ko sab roles par apply karna ho to global group dropdown ke saath Grant Group To All Roles ya Clear Group For All Roles use karein.
+10. Save se pehle Change Preview panel me role-wise Added/Removed permissions verify karein.
+11. Save ke baad affected user se login karke verify karein.
 
 ## 18. Navbar and Sidebar Usage
 

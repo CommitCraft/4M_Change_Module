@@ -23,7 +23,14 @@ const Navbar = ({ toggleSidebar }) => {
           >
             <AiOutlineMenu />
           </button>
-          <h1 className="text-2xl font-bold text-blue-600 dark:text-blue-400">4M System</h1>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="text-2xl font-bold text-blue-600 dark:text-blue-400 hover:opacity-90 transition"
+            aria-label="Go to dashboard"
+          >
+            4M System
+          </button>
         </div>
 
         <div className="flex items-center gap-6">
