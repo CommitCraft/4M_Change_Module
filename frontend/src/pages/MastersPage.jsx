@@ -46,6 +46,20 @@ const MASTER_TABS = [
     placeholder: 'Required skill for machine',
   },
   {
+    key: 'Method Skill Matrix',
+    category: 'method_skill_map',
+    needsType: true,
+    typeLabel: 'Method Subtype',
+    placeholder: 'Required skill for method subtype',
+  },
+  {
+    key: 'Material Skill Matrix',
+    category: 'material_skill_map',
+    needsType: true,
+    typeLabel: 'Material Subtype',
+    placeholder: 'Required skill for material subtype',
+  },
+  {
     key: 'Training Programs',
     category: 'training_program',
     needsType: true,
@@ -79,6 +93,7 @@ const MastersPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+  const [quickSubtypeName, setQuickSubtypeName] = useState('');
   const [forms, setForms] = useState(() =>
     MASTER_TABS.reduce((acc, tab) => {
       acc[tab.key] = { name: '', type: tab.category === 'change_subtype' ? 'Man' : '', status: 'Active' };
@@ -95,6 +110,14 @@ const MastersPage = () => {
   const operators = useMemo(() => allMasters.filter((r) => r.category === 'operator').map((r) => r.name), [allMasters]);
   const machines = useMemo(() => allMasters.filter((r) => r.category === 'machine').map((r) => r.name), [allMasters]);
   const skills = useMemo(() => allMasters.filter((r) => r.category === 'skill').map((r) => r.name), [allMasters]);
+  const methodSubtypes = useMemo(
+    () => allMasters.filter((r) => r.category === 'change_subtype' && r.type === 'Method').map((r) => r.name),
+    [allMasters]
+  );
+  const materialSubtypes = useMemo(
+    () => allMasters.filter((r) => r.category === 'change_subtype' && r.type === 'Material').map((r) => r.name),
+    [allMasters]
+  );
 
   const fetchMasters = useCallback(async () => {
     try {
@@ -126,11 +149,33 @@ const MastersPage = () => {
     if (tabConfig.category === 'change_subtype') return FOUR_M_TYPES;
     if (tabConfig.category === 'operator_skill_map') return operators;
     if (tabConfig.category === 'machine_skill_requirement') return machines;
+    if (tabConfig.category === 'method_skill_map') return methodSubtypes;
+    if (tabConfig.category === 'material_skill_map') return materialSubtypes;
     if (tabConfig.category === 'training_program') return skills;
     if (tabConfig.category === 'type_requirement') return FOUR_M_TYPES;
     if (tabConfig.category === 'type_action_template') return FOUR_M_TYPES;
     return [];
   };
+
+  const getMappedSkills = useCallback(
+    (mappingCategory, typeValue) => {
+      if (!typeValue) return [];
+      const seen = new Set();
+      return allMasters
+        .filter(
+          (row) =>
+            row.category === mappingCategory &&
+            row.type === typeValue &&
+            row.status === 'Active' &&
+            !seen.has(row.name.toLowerCase())
+        )
+        .map((row) => {
+          seen.add(row.name.toLowerCase());
+          return row.name;
+        });
+    },
+    [allMasters]
+  );
 
   const currentRows = useMemo(() => {
     return allMasters
@@ -146,6 +191,10 @@ const MastersPage = () => {
   useEffect(() => {
     setSelectedIds([]);
   }, [activeTab, statusFilter, searchTerm]);
+
+  useEffect(() => {
+    setQuickSubtypeName('');
+  }, [activeTab]);
 
   const categorySummary = useMemo(() => {
     const rows = allMasters.filter((row) => row.category === activeConfig.category);
@@ -361,10 +410,79 @@ const MastersPage = () => {
     }
   };
 
+  const getMappingParentType = useCallback((category) => {
+    if (category === 'method_skill_map') return 'Method';
+    if (category === 'material_skill_map') return 'Material';
+    return null;
+  }, []);
+
+  const addSubtypeForMapping = async () => {
+    if (!canManageMasters) {
+      showError('You do not have permission to update master data');
+      return;
+    }
+
+    const parentType = getMappingParentType(activeConfig.category);
+    if (!parentType) return;
+
+    const names = parseBulkNames(quickSubtypeName);
+    if (names.length === 0) {
+      showError('Subtype name is required');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const results = await Promise.allSettled(
+        names.map((name) =>
+          masterService.createMaster({
+            category: 'change_subtype',
+            type: parentType,
+            name,
+            status: 'Active',
+          })
+        )
+      );
+
+      const successCount = results.filter((result) => result.status === 'fulfilled').length;
+      const failedCount = results.length - successCount;
+
+      if (successCount === 0) {
+        showError('Subtype already exists or could not be created');
+        return;
+      }
+
+      const createdSubtype = names[names.length - 1];
+      setForms((prev) => ({
+        ...prev,
+        [activeConfig.key]: {
+          ...(prev[activeConfig.key] || {}),
+          type: createdSubtype,
+        },
+      }));
+      setQuickSubtypeName('');
+      window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
+      await fetchMasters();
+
+      showSuccess(
+        `${successCount} subtype${successCount > 1 ? 's' : ''} added for ${parentType}${
+          failedCount > 0 ? `, ${failedCount} skipped` : ''
+        }`
+      );
+    } catch (error) {
+      showError(error.response?.data?.message || 'Failed to add subtype');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const allVisibleSelected = currentRows.length > 0 && currentRows.every((row) => selectedIds.includes(row.id));
 
   const tabForm = forms[activeConfig.key] || { name: '', type: '' };
   const typeOptions = getTypeOptions(activeConfig);
+  const isMethodOrMaterialSkillTab =
+    activeConfig.category === 'method_skill_map' || activeConfig.category === 'material_skill_map';
+  const quickSubtypeLabel = activeConfig.category === 'method_skill_map' ? 'Method Subtype' : 'Material Subtype';
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -485,6 +603,25 @@ const MastersPage = () => {
                     Add Entry
                   </button>
                 </div>
+
+                {isMethodOrMaterialSkillTab && (
+                  <div className="mt-3 grid md:grid-cols-4 gap-2">
+                    <input
+                      value={quickSubtypeName}
+                      onChange={(e) => setQuickSubtypeName(e.target.value)}
+                      className="input-field dark:bg-gray-800 dark:text-gray-200 md:col-span-3"
+                      placeholder={`Quick add ${quickSubtypeLabel} (comma/new line supported)`}
+                    />
+                    <button
+                      type="button"
+                      className="btn-secondary disabled:opacity-60"
+                      onClick={addSubtypeForMapping}
+                      disabled={!canManageMasters || saving}
+                    >
+                      Add {quickSubtypeLabel}
+                    </button>
+                  </div>
+                )}
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Multiple names supported: comma ya new line se add karein.</p>
               </div>
 
@@ -574,12 +711,26 @@ const MastersPage = () => {
                         </th>
                         {activeConfig.needsType && <th>{activeConfig.typeLabel || 'Type'}</th>}
                         <th>Name</th>
+                        {(activeConfig.category === 'machine' || activeConfig.category === 'operator' || activeConfig.category === 'change_subtype') && <th>Mapped Skills</th>}
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {currentRows.map((item) => (
+                        (() => {
+                          const mappedSkills =
+                            activeConfig.category === 'machine'
+                              ? getMappedSkills('machine_skill_requirement', item.name)
+                              : activeConfig.category === 'operator'
+                              ? getMappedSkills('operator_skill_map', item.name)
+                              : activeConfig.category === 'change_subtype' && item.type === 'Method'
+                              ? getMappedSkills('method_skill_map', item.name)
+                              : activeConfig.category === 'change_subtype' && item.type === 'Material'
+                              ? getMappedSkills('material_skill_map', item.name)
+                              : [];
+
+                          return (
                         <tr key={item.id}>
                           <td>
                             <input
@@ -590,6 +741,24 @@ const MastersPage = () => {
                           </td>
                           {activeConfig.needsType && <td>{item.type || '-'}</td>}
                           <td className="break-words max-w-[280px]">{item.name}</td>
+                          {(activeConfig.category === 'machine' || activeConfig.category === 'operator' || activeConfig.category === 'change_subtype') && (
+                            <td className="max-w-[320px]">
+                              {mappedSkills.length === 0 ? (
+                                <span className="text-xs text-gray-500 dark:text-gray-400">No skill mapped</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {mappedSkills.map((skill) => (
+                                    <span
+                                      key={`${item.id}-${skill}`}
+                                      className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                    >
+                                      {skill}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          )}
                           <td>
                             <span
                               className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
@@ -630,6 +799,8 @@ const MastersPage = () => {
                             </div>
                           </td>
                         </tr>
+                          );
+                        })()
                       ))}
                     </tbody>
                   </table>
