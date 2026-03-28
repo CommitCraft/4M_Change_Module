@@ -1,4 +1,63 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// Custom MultiSelectDropdown component for skills
+const MultiSelectDropdown = ({ options, selected, onChange, placeholder }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef();
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        className="input-field dark:bg-gray-800 dark:text-gray-200 w-full text-left flex justify-between items-center"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span>
+          {selected.length === 0 ? (
+            <span className="text-gray-400">{placeholder}</span>
+          ) : (
+            selected.join(', ')
+          )}
+        </span>
+        <span className="ml-2">▼</span>
+      </button>
+      {open && (
+        <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded shadow-lg max-h-48 overflow-y-auto">
+          {options.length === 0 ? (
+            <div className="p-2 text-gray-500 text-sm">No skills found</div>
+          ) : (
+            options.map((opt) => (
+              <label key={opt} className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.includes(opt)}
+                  onChange={() => {
+                    if (selected.includes(opt)) {
+                      onChange(selected.filter((s) => s !== opt));
+                    } else {
+                      onChange([...selected, opt]);
+                    }
+                  }}
+                  className="mr-2"
+                />
+                {opt}
+              </label>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -590,7 +649,30 @@ const MastersPage = () => {
           </div>
         </div>
 
-        <div className="card">
+              <div className="card">
+                {/* Info box for Skill & Mapping Masters guidance */}
+                {[
+                  'Operator Skills',
+                  'Machine Skill Matrix',
+                  'Method Skill Matrix',
+                  'Material Skill Matrix',
+                  'Training Programs',
+                ].includes(activeConfig.key) && (
+                  <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+                    <strong>How to use:</strong> <br />
+                    <ul className="list-disc pl-5 mt-1">
+                      <li>
+                        <span className="font-medium">Add new skills only in <span className="underline">Core Masters &rarr; Skills</span>.</span>
+                      </li>
+                      <li>
+                        <span className="font-medium">Here, you can <span className="underline">assign or map</span> existing skills to operators, machines, methods, materials, or training programs.</span>
+                      </li>
+                      <li>
+                        <span className="font-medium">If a skill is missing from the list, add it first in <span className="underline">Skills</span> and then return here to map it.</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
           {!canManageMasters && (
             <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
               You have read-only access to master data.
@@ -696,14 +778,30 @@ const MastersPage = () => {
                         ))}
                       </select>
                     )}
-                    <textarea
-                      value={tabForm.name}
-                      onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, name: e.target.value } }))}
-                      className="input-field dark:bg-gray-800 dark:text-gray-200"
-                      placeholder={activeConfig.placeholder}
-                      rows={2}
-                      required
-                    />
+                    {/* Use MultiSelectDropdown for skills in mapping masters */}
+                    {[
+                      'Operator Skills',
+                      'Machine Skill Matrix',
+                      'Method Skill Matrix',
+                      'Material Skill Matrix',
+                      'Training Programs',
+                    ].includes(activeConfig.key) ? (
+                      <MultiSelectDropdown
+                        options={skills}
+                        selected={tabForm.name ? tabForm.name.split(',').map(s => s.trim()).filter(Boolean) : []}
+                        onChange={arr => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, name: arr.join(', ') } }))}
+                        placeholder="Select skill(s)"
+                      />
+                    ) : (
+                      <textarea
+                        value={tabForm.name}
+                        onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, name: e.target.value } }))}
+                        className="input-field dark:bg-gray-800 dark:text-gray-200"
+                        placeholder={activeConfig.placeholder}
+                        rows={2}
+                        required
+                      />
+                    )}
                     <select
                       value={tabForm.status || 'Active'}
                       onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, status: e.target.value } }))}
@@ -979,12 +1077,28 @@ const MastersPage = () => {
                         ))}
                       </select>
                     )}
-                    <input
-                      value={editing.name}
-                      onChange={(e) => setEditing((prev) => ({ ...prev, name: e.target.value }))}
-                      className="input-field dark:bg-gray-800 dark:text-gray-200"
-                      required
-                    />
+                    {/* Use MultiSelectDropdown for skills in mapping masters */}
+                    {[
+                      'Operator Skills',
+                      'Machine Skill Matrix',
+                      'Method Skill Matrix',
+                      'Material Skill Matrix',
+                      'Training Programs',
+                    ].includes(activeConfig.key) ? (
+                      <MultiSelectDropdown
+                        options={skills}
+                        selected={editing.name ? editing.name.split(',').map(s => s.trim()).filter(Boolean) : []}
+                        onChange={arr => setEditing((prev) => ({ ...prev, name: arr.join(', ') }))}
+                        placeholder="Select skill(s)"
+                      />
+                    ) : (
+                      <input
+                        value={editing.name}
+                        onChange={(e) => setEditing((prev) => ({ ...prev, name: e.target.value }))}
+                        className="input-field dark:bg-gray-800 dark:text-gray-200"
+                        required
+                      />
+                    )}
                     <select
                       value={editing.status || 'Active'}
                       onChange={(e) => setEditing((prev) => ({ ...prev, status: e.target.value }))}
