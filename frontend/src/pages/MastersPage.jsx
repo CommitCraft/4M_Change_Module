@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { masterService } from '../services/api';
+import Modal from '../components/Modal';
 import { showError, showSuccess } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 
@@ -96,6 +97,7 @@ const TAB_HINTS = {
 const MastersPage = () => {
   const { hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Departments');
   const [allMasters, setAllMasters] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -599,12 +601,52 @@ const MastersPage = () => {
             <aside className="lg:col-span-3">
               <div className="lg:sticky lg:top-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Master Navigator</h3>
-                <div className="space-y-2">
-                  {MASTER_TABS.map((tab) => (
+                <div className="space-y-1">
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-2 mb-1">Core Masters</div>
+                  {MASTER_TABS.filter(tab => [
+                    'Departments', 'Production Lines', 'Machines', 'Operators', 'Skills', 'Risk Levels', 'Change Subtypes',
+                    
+                  ].includes(tab.key)).map((tab) => (
                     <button
                       key={tab.key}
                       type="button"
                       className={`w-full text-left px-3 py-2 rounded-lg border text-sm ${
+                        activeTab === tab.key
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                      onClick={() => setActiveTab(tab.key)}
+                    >
+                      {tab.key}
+                    </button>
+                  ))}
+
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Skill & Mapping Masters</div>
+                  {MASTER_TABS.filter(tab => [
+                    'Operator Skills', 'Machine Skill Matrix', 'Method Skill Matrix', 'Material Skill Matrix', 'Training Programs'
+                  ].includes(tab.key)).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm pl-6 ${
+                        activeTab === tab.key
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                      onClick={() => setActiveTab(tab.key)}
+                    >
+                      {tab.key}
+                    </button>
+                  ))}
+
+                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Governance Masters</div>
+                  {MASTER_TABS.filter(tab => [
+                    'Type Requirements', 'Type Action Templates'
+                  ].includes(tab.key)).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm pl-6 ${
                         activeTab === tab.key
                           ? 'bg-blue-600 text-white border-blue-600'
                           : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
@@ -630,48 +672,185 @@ const MastersPage = () => {
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                   {TAB_HINTS[activeConfig.category] || 'Manage entries for this master category.'}
                 </p>
-                <div className="grid md:grid-cols-5 gap-2">
-                  {activeConfig.needsType && (
+                
+                <Modal isOpen={addModalOpen} title={`Add Entry - ${activeConfig.key}`} onClose={() => setAddModalOpen(false)}>
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      createMaster(tabForm);
+                      setAddModalOpen(false);
+                    }}
+                    className="space-y-4"
+                  >
+                    {activeConfig.needsType && (
+                      <select
+                        value={tabForm.type}
+                        onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, type: e.target.value } }))}
+                        className="input-field dark:bg-gray-800 dark:text-gray-200"
+                        required
+                      >
+                        <option value="">Select {activeConfig.typeLabel || 'Type'}</option>
+                        {typeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    <textarea
+                      value={tabForm.name}
+                      onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, name: e.target.value } }))}
+                      className="input-field dark:bg-gray-800 dark:text-gray-200"
+                      placeholder={activeConfig.placeholder}
+                      rows={2}
+                      required
+                    />
                     <select
-                      value={tabForm.type}
-                      onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, type: e.target.value } }))}
+                      value={tabForm.status || 'Active'}
+                      onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, status: e.target.value } }))}
                       className="input-field dark:bg-gray-800 dark:text-gray-200"
                     >
-                      <option value="">Select {activeConfig.typeLabel || 'Type'}</option>
-                      {typeOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
+                      {STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>
+                          {status}
                         </option>
                       ))}
                     </select>
-                  )}
-                  <textarea
-                    value={tabForm.name}
-                    onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, name: e.target.value } }))}
-                    className="input-field dark:bg-gray-800 dark:text-gray-200"
-                    placeholder={activeConfig.placeholder}
-                    rows={2}
-                  />
-                  <select
-                    value={tabForm.status || 'Active'}
-                    onChange={(e) => setForms((prev) => ({ ...prev, [activeConfig.key]: { ...tabForm, status: e.target.value } }))}
-                    className="input-field dark:bg-gray-800 dark:text-gray-200"
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="btn-primary disabled:opacity-60"
-                    onClick={() => createMaster(tabForm)}
-                    disabled={!canManageMasters || saving}
-                  >
-                    Add Entry
-                  </button>
-                </div>
+                    {/* Mapping checkboxes for relevant categories */}
+                    {['machine', 'operator', 'change_subtype'].includes(activeConfig.category) && (
+                      <div className="flex flex-wrap gap-4 mt-2 border-t pt-3">
+                        {activeConfig.category === 'machine' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={tabForm.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setForms(prev => {
+                                        const prevSkills = prev[activeConfig.key].mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          [activeConfig.key]: {
+                                            ...prev[activeConfig.key],
+                                            mappedSkills: e.target.checked
+                                              ? [...prevSkills, skill]
+                                              : prevSkills.filter(s => s !== skill)
+                                          }
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'operator' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Assigned Skills</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={tabForm.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setForms(prev => {
+                                        const prevSkills = prev[activeConfig.key].mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          [activeConfig.key]: {
+                                            ...prev[activeConfig.key],
+                                            mappedSkills: e.target.checked
+                                              ? [...prevSkills, skill]
+                                              : prevSkills.filter(s => s !== skill)
+                                          }
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'change_subtype' && tabForm.type === 'Method' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills (Method)</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={tabForm.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setForms(prev => {
+                                        const prevSkills = prev[activeConfig.key].mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          [activeConfig.key]: {
+                                            ...prev[activeConfig.key],
+                                            mappedSkills: e.target.checked
+                                              ? [...prevSkills, skill]
+                                              : prevSkills.filter(s => s !== skill)
+                                          }
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'change_subtype' && tabForm.type === 'Material' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills (Material)</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={tabForm.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setForms(prev => {
+                                        const prevSkills = prev[activeConfig.key].mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          [activeConfig.key]: {
+                                            ...prev[activeConfig.key],
+                                            mappedSkills: e.target.checked
+                                              ? [...prevSkills, skill]
+                                              : prevSkills.filter(s => s !== skill)
+                                          }
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex gap-2 justify-end">
+                      <button type="button" className="btn-secondary" onClick={() => setAddModalOpen(false)}>
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn-primary" disabled={saving}>
+                        Add
+                      </button>
+                    </div>
+                  </form>
+                </Modal>
 
                 {isMethodOrMaterialSkillTab && (
                   <div className="mt-3 grid md:grid-cols-4 gap-2">
@@ -691,20 +870,22 @@ const MastersPage = () => {
                     </button>
                   </div>
                 )}
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Multiple names supported: comma ya new line se add karein.</p>
+                
               </div>
 
-              <div className={`mb-2 grid ${activeConfig.needsType ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-2`}>
+              <div className="mb-2 flex items-center gap-2 overflow-x-auto whitespace-nowrap">
                 <input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="input-field dark:bg-gray-800 dark:text-gray-200"
+                  className="input-field dark:bg-gray-800 dark:text-gray-200 min-w-0 max-w-[180px] flex-shrink"
                   placeholder="Search by name or type"
+                  style={{ width: '160px' }}
                 />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="input-field dark:bg-gray-800 dark:text-gray-200"
+                  className="input-field dark:bg-gray-800 dark:text-gray-200 min-w-0 max-w-[130px] flex-shrink"
+                  style={{ width: '120px' }}
                 >
                   <option value="All">All Status</option>
                   <option value="Active">Active</option>
@@ -714,7 +895,8 @@ const MastersPage = () => {
                   <select
                     value={typeFilter}
                     onChange={(e) => setTypeFilter(e.target.value)}
-                    className="input-field dark:bg-gray-800 dark:text-gray-200"
+                    className="input-field dark:bg-gray-800 dark:text-gray-200 min-w-0 max-w-[150px] flex-shrink"
+                    style={{ width: '130px' }}
                   >
                     <option value="All">All {activeConfig.typeLabel || 'Types'}</option>
                     {availableTypeFilters.map((typeValue) => (
@@ -724,8 +906,22 @@ const MastersPage = () => {
                     ))}
                   </select>
                 )}
-                <button type="button" className="btn-secondary" onClick={() => { setSearchTerm(''); setStatusFilter('All'); setTypeFilter('All'); }}>
+                <button
+                  type="button"
+                  className="btn-secondary flex-shrink-0"
+                  style={{ minWidth: '100px' }}
+                  onClick={() => { setSearchTerm(''); setStatusFilter('All'); setTypeFilter('All'); }}
+                >
                   Clear Filters
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary disabled:opacity-60 flex-shrink-0"
+                  style={{ minWidth: '100px' }}
+                  onClick={() => setAddModalOpen(true)}
+                  disabled={!canManageMasters}
+                >
+                  Add Entry
                 </button>
               </div>
 
@@ -885,15 +1081,21 @@ const MastersPage = () => {
                 </div>
               )}
 
-              {editing && (
-                <div className="mt-6 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Edit Entry</h3>
-                  <div className="grid md:grid-cols-5 gap-2">
+              <Modal isOpen={!!editing} title={`Edit Entry - ${activeConfig.key}`} onClose={() => setEditing(null)}>
+                {editing && (
+                  <form
+                    onSubmit={e => {
+                      e.preventDefault();
+                      updateMaster();
+                    }}
+                    className="space-y-4"
+                  >
                     {activeConfig.needsType && (
                       <select
                         value={editing.type || ''}
                         onChange={(e) => setEditing((prev) => ({ ...prev, type: e.target.value }))}
                         className="input-field dark:bg-gray-800 dark:text-gray-200"
+                        required
                       >
                         <option value="">Select {activeConfig.typeLabel || 'Type'}</option>
                         {typeOptions.map((option) => (
@@ -907,6 +1109,7 @@ const MastersPage = () => {
                       value={editing.name}
                       onChange={(e) => setEditing((prev) => ({ ...prev, name: e.target.value }))}
                       className="input-field dark:bg-gray-800 dark:text-gray-200"
+                      required
                     />
                     <select
                       value={editing.status || 'Active'}
@@ -919,15 +1122,130 @@ const MastersPage = () => {
                         </option>
                       ))}
                     </select>
-                    <button type="button" className="btn-primary disabled:opacity-60" onClick={updateMaster} disabled={!canManageMasters || saving}>
-                      Save
-                    </button>
-                    <button type="button" className="btn-secondary" onClick={() => setEditing(null)}>
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+                    {/* Mapping checkboxes for relevant categories */}
+                    {['machine', 'operator', 'change_subtype'].includes(activeConfig.category) && (
+                      <div className="flex flex-wrap gap-4 mt-2 border-t pt-3">
+                        {activeConfig.category === 'machine' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={editing.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setEditing(prev => {
+                                        const prevSkills = prev.mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          mappedSkills: e.target.checked
+                                            ? [...prevSkills, skill]
+                                            : prevSkills.filter(s => s !== skill)
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'operator' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Assigned Skills</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={editing.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setEditing(prev => {
+                                        const prevSkills = prev.mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          mappedSkills: e.target.checked
+                                            ? [...prevSkills, skill]
+                                            : prevSkills.filter(s => s !== skill)
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'change_subtype' && editing.type === 'Method' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills (Method)</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={editing.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setEditing(prev => {
+                                        const prevSkills = prev.mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          mappedSkills: e.target.checked
+                                            ? [...prevSkills, skill]
+                                            : prevSkills.filter(s => s !== skill)
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {activeConfig.category === 'change_subtype' && editing.type === 'Material' && (
+                          <div>
+                            <label className="block text-xs font-semibold mb-1">Map Required Skills (Material)</label>
+                            <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
+                              {skills.map((skill) => (
+                                <label key={skill} className="flex items-center gap-1 text-xs">
+                                  <input
+                                    type="checkbox"
+                                    checked={editing.mappedSkills?.includes(skill) || false}
+                                    onChange={e => {
+                                      setEditing(prev => {
+                                        const prevSkills = prev.mappedSkills || [];
+                                        return {
+                                          ...prev,
+                                          mappedSkills: e.target.checked
+                                            ? [...prevSkills, skill]
+                                            : prevSkills.filter(s => s !== skill)
+                                        };
+                                      });
+                                    }}
+                                  />
+                                  {skill}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex gap-2 justify-end">
+                      <button type="button" className="btn-secondary" onClick={() => setEditing(null)}>
+                        Cancel
+                      </button>
+                      <button type="submit" className="btn-primary" disabled={!canManageMasters || saving}>
+                        Save
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </Modal>
             </section>
           </div>
         </div>
