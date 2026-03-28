@@ -1,3 +1,20 @@
+.control-bar {
+  @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-sm rounded-lg p-3 flex flex-wrap md:flex-nowrap gap-2 items-center;
+}
+
+.table-container {
+  @apply bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow rounded-lg my-2;
+}
+
+.input-field::placeholder {
+  color: #a0aec0;
+  opacity: 1;
+}
+
+.input-field:focus {
+  @apply border-blue-500 ring-2 ring-blue-200 dark:ring-blue-600;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

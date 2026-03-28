@@ -19,7 +19,7 @@ const ReportsPage = () => {
       try {
         const [statsRes, listRes] = await Promise.all([
           changeRequestService.getDashboardStats(),
-          changeRequestService.getChangeRequests({ page: 1, limit: 300, sortBy: 'created_at', sortOrder: 'DESC' }),
+          changeRequestService.getChangeRequests({ page: 1, limit: 100, sortBy: 'created_at', sortOrder: 'DESC' }),
         ]);
         setStats(statsRes.data.data);
         setRows(listRes.data.data.rows || []);
