@@ -26,6 +26,7 @@ const parseBulkNames = (rawValue) => {
 
 const MASTER_TABS = [
   { key: 'Departments', category: 'department', needsType: false, placeholder: 'Department name' },
+  { key: 'Production Lines', category: 'production_line', needsType: false, placeholder: 'Production line name/ID' },
   { key: 'Machines', category: 'machine', needsType: false, placeholder: 'Machine ID / Name' },
   { key: 'Change Subtypes', category: 'change_subtype', needsType: true, typeLabel: '4M Type', placeholder: 'Subtype name' },
   { key: 'Risk Levels', category: 'risk_level', needsType: false, placeholder: 'Risk level' },
