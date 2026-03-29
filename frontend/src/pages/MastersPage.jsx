@@ -1238,7 +1238,12 @@ const MastersPage = () => {
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
                                     disabled={!canManageMasters}
-                                    onClick={() => setEditing({ ...rows[0] })}
+                                    onClick={() => setEditing({
+                                      ...rows[0],
+                                      name: rows.map(r => r.skill).join(', '),
+                                      // For operator_skill_map: type = operator, for machine_skill_requirement: type = machine
+                                      type: rows[0].operator || rows[0].machine || rows[0].type || ''
+                                    })}
                                   >
                                     Edit
                                   </button>
