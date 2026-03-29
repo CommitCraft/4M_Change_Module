@@ -1255,81 +1255,151 @@ const MastersPage = () => {
                             </tr>
                           );
                         })
-                      ) : (
-                          currentRows.map((item) => {
-                            const mappedSkills = getMappedSkillsForItem(item);
-                            return (
-                              <tr key={item.id}>
-                                <td>
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedIds.includes(item.id)}
-                                    onChange={() => toggleSelectRow(item.id)}
-                                  />
-                                </td>
-                                {activeConfig.needsType && <td>{item.type || '-'}</td>}
-                                <td className="break-words max-w-[280px]">{item.name}</td>
-                                {shouldShowMappedSkills && (
-                                  <td className="max-w-[320px]">
-                                    {mappedSkills.length === 0 ? (
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">No skill mapped</span>
-                                    ) : (
-                                      <div className="flex flex-wrap gap-1">
-                                        {mappedSkills.map((skill) => (
-                                          <span
-                                            key={`${item.id}-${skill}`}
-                                            className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                          >
-                                            {skill}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </td>
-                                )}
-                                <td>
-                                  <span
-                                    className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                      item.status === 'Active'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                    }`}
+                      ) : activeConfig.category === 'machine_skill_requirement' ? (
+                        // Group machineSkillRequirements by machine, then join skills (show all regardless of typeFilter)
+                        Object.entries(
+                          allMasters
+                            .filter(row => row.category === 'machine_skill_requirement')
+                            .reduce((acc, row) => {
+                              const key = row.type || row.machine || '';
+                              if (!acc[key]) acc[key] = [];
+                              acc[key].push(row);
+                              return acc;
+                            }, {})
+                        ).map(([machine, rows]) => {
+                          const status = rows[0].status;
+                          const id = rows.map(r => r.id).join('-');
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={rows.every(r => selectedIds.includes(r.id))}
+                                  onChange={() => rows.forEach(r => toggleSelectRow(r.id))}
+                                />
+                              </td>
+                              <td>{machine || '-'}</td>
+                              <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
+                              <td className="max-w-[320px]">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                              </td>
+                              <td>
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                    status === 'Active'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => toggleMasterStatus(rows[0])}
                                   >
-                                    {item.status || 'Active'}
-                                  </span>
+                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters}
+                                    onClick={() => setEditing({ ...rows[0] })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => removeMaster(rows[0].id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        currentRows.map((item) => {
+                          const mappedSkills = getMappedSkillsForItem(item);
+                          return (
+                            <tr key={item.id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(item.id)}
+                                  onChange={() => toggleSelectRow(item.id)}
+                                />
+                              </td>
+                              {activeConfig.needsType && <td>{item.type || '-'}</td>}
+                              <td className="break-words max-w-[280px]">{item.name}</td>
+                              {shouldShowMappedSkills && (
+                                <td className="max-w-[320px]">
+                                  {mappedSkills.length === 0 ? (
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">No skill mapped</span>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1">
+                                      {mappedSkills.map((skill) => (
+                                        <span
+                                          key={`${item.id}-${skill}`}
+                                          className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
+                                        >
+                                          {skill}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
                                 </td>
-                                <td>
-                                  <div className="flex gap-2 flex-wrap">
-                                    <button
-                                      type="button"
-                                      className="btn-secondary disabled:opacity-60"
-                                      disabled={!canManageMasters || saving}
-                                      onClick={() => toggleMasterStatus(item)}
-                                    >
-                                      {item.status === 'Active' ? 'Deactivate' : 'Activate'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn-secondary disabled:opacity-60"
-                                      disabled={!canManageMasters}
-                                      onClick={() => setEditing({ ...item })}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn-danger disabled:opacity-60"
-                                      disabled={!canManageMasters || saving}
-                                      onClick={() => removeMaster(item.id)}
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
+                              )}
+                              <td>
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                    item.status === 'Active'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {item.status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => toggleMasterStatus(item)}
+                                  >
+                                    {item.status === 'Active' ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters}
+                                    onClick={() => setEditing({ ...item })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => removeMaster(item.id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
