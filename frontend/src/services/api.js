@@ -6,9 +6,53 @@ export const riskLevelService = {
 };
 // Legacy masterService for backward compatibility
 export const masterService = {
-  getMasters: (params) => {
-    // If params is an object, pass as query; else, get all
-    return departmentService.getAll(params);
+  getMasters: async (params = {}) => {
+    // Fetch all master data types in parallel and return a combined array
+    try {
+      const [
+        departments,
+        productionLines,
+        machines,
+        changeSubTypes,
+        operators,
+        skills,
+        operatorSkillMaps,
+        machineSkillRequirements,
+        trainingPrograms,
+        typeRequirements,
+        typeActionTemplates,
+        riskLevels
+      ] = await Promise.all([
+        departmentService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
+        productionLineService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
+        machineService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
+        changeSubTypeService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'change_subtype' })) ),
+        operatorService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator' })) ),
+        skillService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'skill' })) ),
+        operatorSkillMapService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator_skill_map' })) ),
+        machineSkillRequirementService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine_skill_requirement' })) ),
+        trainingProgramService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'training_program' })) ),
+        typeRequirementService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_requirement' })) ),
+        typeActionTemplateService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_action_template' })) ),
+        riskLevelService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
+      ]);
+      return { data: [
+        ...departments,
+        ...productionLines,
+        ...machines,
+        ...changeSubTypes,
+        ...operators,
+        ...skills,
+        ...operatorSkillMaps,
+        ...machineSkillRequirements,
+        ...trainingPrograms,
+        ...typeRequirements,
+        ...typeActionTemplates,
+        ...riskLevels,
+      ] };
+    } catch (error) {
+      throw error;
+    }
   },
   createMaster: (payload) => departmentService.create(payload),
   updateMaster: (id, payload) => departmentService.update(id, payload),

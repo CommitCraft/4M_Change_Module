@@ -6,14 +6,16 @@ USE change_management;
 
 -- Drop tables if they exist (for clean setup)
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS attachments, approvals, audit_logs, change_requests, departments, guided_setup_progress, master_data, machines, operator_skill_maps, operators, machine_skill_requirements, production_lines, risk_levels, roles, role_permissions, skills, training_programs, type_action_templates, type_requirements, users;
+DROP TABLE IF EXISTS attachments, approvals, audit_logs, change_requests, departments, guided_setup_progress, master_data, machines, operator_skill_maps, operators, machine_skill_requirements, production_lines, risk_levels, roles, role_permissions, skills, training_programs, type_action_templates, type_requirements, users, change_sub_types;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- Departments
 CREATE TABLE departments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO departments (name, status) VALUES
   ('Production', 'Active'),
@@ -24,15 +26,18 @@ INSERT INTO departments (name, status) VALUES
 -- Roles
 CREATE TABLE roles (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL UNIQUE
+  name VARCHAR(100) NOT NULL UNIQUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO roles (name) VALUES ('SuperAdmin'), ('Admin'), ('Manager'), ('Operator');
 
--- Role Permissions
 CREATE TABLE role_permissions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   role_id INT NOT NULL UNIQUE,
   permissions JSON NOT NULL DEFAULT (JSON_ARRAY()),
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 INSERT INTO role_permissions (role_id, permissions) VALUES
@@ -60,11 +65,12 @@ INSERT INTO users (name, email, password, role_id, department_id) VALUES
   ('Manager User', 'manager@example.com', '$2a$10$demoHash', 3, 3),
   ('Operator User', 'operator@example.com', '$2a$10$demoHash', 4, 1);
 
--- Risk Levels
 CREATE TABLE risk_levels (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(50) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO risk_levels (name, status) VALUES
   ('Low', 'Active'),
@@ -72,96 +78,105 @@ INSERT INTO risk_levels (name, status) VALUES
   ('High', 'Active'),
   ('Critical', 'Active');
 
--- Production Lines
 CREATE TABLE production_lines (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO production_lines (name, status) VALUES
   ('Line A', 'Active'),
   ('Line B', 'Active');
 
--- Machines
 CREATE TABLE machines (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO machines (name, status) VALUES
   ('Machine 1', 'Active'),
   ('Machine 2', 'Active');
 
--- Operators
 CREATE TABLE operators (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO operators (name, status) VALUES
   ('Operator 1', 'Active'),
   ('Operator 2', 'Active');
 
--- Skills
 CREATE TABLE skills (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(120) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'
+  status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO skills (name, status) VALUES
   ('Skill A', 'Active'),
   ('Skill B', 'Active');
 
--- Operator Skill Map
 CREATE TABLE operator_skill_maps (
   id INT AUTO_INCREMENT PRIMARY KEY,
   operator VARCHAR(120) NOT NULL,
   skill VARCHAR(120) NOT NULL,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO operator_skill_maps (operator, skill, status) VALUES
   ('Operator 1', 'Skill A', 'Active'),
   ('Operator 2', 'Skill B', 'Active');
 
--- Machine Skill Requirement
 CREATE TABLE machine_skill_requirements (
   id INT AUTO_INCREMENT PRIMARY KEY,
   machine VARCHAR(120) NOT NULL,
   skill VARCHAR(120) NOT NULL,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO machine_skill_requirements (machine, skill, status) VALUES
   ('Machine 1', 'Skill A', 'Active'),
   ('Machine 2', 'Skill B', 'Active');
 
--- Training Programs
 CREATE TABLE training_programs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   skill VARCHAR(120) NOT NULL,
   name VARCHAR(120) NOT NULL,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO training_programs (skill, name, status) VALUES
   ('Skill A', 'TP 1', 'Active'),
   ('Skill B', 'TP 2', 'Active');
 
--- Type Requirements
 CREATE TABLE type_requirements (
   id INT AUTO_INCREMENT PRIMARY KEY,
   type VARCHAR(50) NOT NULL,
   name VARCHAR(120) NOT NULL,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO type_requirements (type, name, status) VALUES
   ('Man', 'Req 1', 'Active'),
   ('Machine', 'Req 2', 'Active');
 
--- Type Action Templates
 CREATE TABLE type_action_templates (
   id INT AUTO_INCREMENT PRIMARY KEY,
   type VARCHAR(50) NOT NULL,
   name VARCHAR(120) NOT NULL,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO type_action_templates (type, name, status) VALUES
   ('Man', 'Action 1', 'Active'),
@@ -197,7 +212,9 @@ CREATE TABLE change_sub_types (
   id INT AUTO_INCREMENT PRIMARY KEY,
   type VARCHAR(50) NOT NULL,
   name VARCHAR(120) NOT NULL UNIQUE,
-  status ENUM('Active','Inactive') DEFAULT 'Active'
+  status ENUM('Active','Inactive') DEFAULT 'Active',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 INSERT INTO change_sub_types (type, name, status) VALUES
   ('Man', 'SubType 1', 'Active'),
@@ -271,6 +288,8 @@ CREATE TABLE approvals (
   status ENUM('Pending','Approved','Rejected') NOT NULL DEFAULT 'Pending',
   remarks TEXT,
   approved_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES change_requests(id),
   FOREIGN KEY (approver_id) REFERENCES users(id)
 );
@@ -282,6 +301,8 @@ CREATE TABLE attachments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
   file_path VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES change_requests(id)
 );
 INSERT INTO attachments (request_id, file_path) VALUES
@@ -293,7 +314,8 @@ CREATE TABLE audit_logs (
   request_id INT NOT NULL,
   user_id INT NOT NULL,
   action ENUM('CREATED','UPDATED','APPROVED','REJECTED','IMPLEMENTED') NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES change_requests(id),
   FOREIGN KEY (user_id) REFERENCES users(id)
 );

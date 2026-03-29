@@ -397,11 +397,11 @@ const MastersPage = () => {
       return;
     }
 
+
     try {
       setSaving(true);
       const results = await Promise.allSettled(
         names.map((name) =>
-          // Use correct service for each master type
           (() => {
             switch (activeConfig.category) {
               case 'department':
@@ -434,13 +434,35 @@ const MastersPage = () => {
       );
 
       const successCount = results.filter((result) => result.status === 'fulfilled').length;
-      const failedCount = results.length - successCount;
+      const failed = results
+        .map((result, idx) => {
+          if (result.status === 'rejected') {
+            let msg = 'Unknown error';
+            if (result.reason?.response?.data?.message) {
+              msg = result.reason.response.data.message;
+            } else if (result.reason?.message) {
+              msg = result.reason.message;
+            }
+            return { name: names[idx], error: msg };
+          }
+          return null;
+        })
+        .filter(Boolean);
 
       if (successCount > 0) {
-        showSuccess(`${successCount} entr${successCount > 1 ? 'ies' : 'y'} added${failedCount > 0 ? `, ${failedCount} skipped` : ''}`);
+        showSuccess(`${successCount} entr${successCount > 1 ? 'ies' : 'y'} added${failed.length > 0 ? `, ${failed.length} skipped` : ''}`);
+        if (failed.length > 0) {
+          showError(
+            failed.map(f => `${f.name}: ${f.error}`).join('\n')
+          );
+        }
         window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
       } else {
-        showError('All entries failed (maybe already exists)');
+        showError(
+          failed.length > 0
+            ? failed.map(f => `${f.name}: ${f.error}`).join('\n')
+            : 'All entries failed (maybe already exists)'
+        );
       }
 
       setForms((prev) => ({
