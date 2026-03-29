@@ -172,6 +172,7 @@ const MastersPage = () => {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('Departments');
   const [allMasters, setAllMasters] = useState([]);
+  const [operatorSkillMaps, setOperatorSkillMaps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -209,19 +210,19 @@ const MastersPage = () => {
   const fetchMasters = useCallback(async () => {
     setLoading(true);
     try {
-      const [departments, productionLines, machines, changeSubTypes, operators, skills, operatorSkillMaps, machineSkillRequirements, trainingPrograms, typeRequirements, typeActionTemplates, riskLevels] = await Promise.all([
+      const [departments, productionLines, machines, changeSubTypes, operators, skills, machineSkillRequirements, trainingPrograms, typeRequirements, typeActionTemplates, riskLevels, operatorSkillMapsRes] = await Promise.all([
         departmentService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
         productionLineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
         machineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
         changeSubTypeService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'change_subtype' })) ),
         operatorService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator' })) ),
         skillService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'skill' })) ),
-        operatorSkillMapService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator_skill_map' })) ),
         machineSkillRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine_skill_requirement' })) ),
         trainingProgramService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'training_program' })) ),
         typeRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_requirement' })) ),
         typeActionTemplateService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_action_template' })) ),
         riskLevelService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
+        operatorSkillMapService.getAll().then(res => res.data.data || []),
       ]);
       setAllMasters([
         ...departments,
@@ -230,13 +231,13 @@ const MastersPage = () => {
         ...changeSubTypes,
         ...operators,
         ...skills,
-        ...operatorSkillMaps,
         ...machineSkillRequirements,
         ...trainingPrograms,
         ...typeRequirements,
         ...typeActionTemplates,
         ...riskLevels,
       ]);
+      setOperatorSkillMaps(operatorSkillMapsRes);
     } catch (error) {
       showError('Failed to fetch masters');
     } finally {
@@ -327,6 +328,17 @@ const MastersPage = () => {
   );
 
   const currentRows = useMemo(() => {
+    if (activeConfig.category === 'operator_skill_map') {
+      // Use operatorSkillMaps directly for this tab
+      return operatorSkillMaps
+        .filter((row) => (statusFilter === 'All' ? true : row.status === statusFilter))
+        .filter((row) => (typeFilter === 'All' ? true : (row.operator || '') === typeFilter))
+        .filter((row) => {
+          if (!searchTerm.trim()) return true;
+          const query = searchTerm.toLowerCase();
+          return (row.skill || '').toLowerCase().includes(query) || (row.operator || '').toLowerCase().includes(query);
+        });
+    }
     return allMasters
       .filter((row) => row.category === activeConfig.category)
       .filter((row) => (statusFilter === 'All' ? true : row.status === statusFilter))
@@ -336,7 +348,7 @@ const MastersPage = () => {
         const query = searchTerm.toLowerCase();
         return row.name.toLowerCase().includes(query) || (row.type || '').toLowerCase().includes(query);
       });
-  }, [allMasters, activeConfig, statusFilter, typeFilter, searchTerm]);
+  }, [allMasters, operatorSkillMaps, activeConfig, statusFilter, typeFilter, searchTerm]);
 
   const availableTypeFilters = useMemo(() => {
     if (!activeConfig.needsType) return [];
@@ -702,15 +714,36 @@ const MastersPage = () => {
 
     try {
       setSaving(true);
+      // Bulk update using correct service for each master type
       await Promise.all(
-        rowsToUpdate.map((row) =>
-          masterService.updateMaster(row.id, {
-            category: row.category,
-            type: row.type || null,
-            name: row.name,
-            status: targetStatus,
-          })
-        )
+        rowsToUpdate.map((row) => {
+          switch (row.category) {
+            case 'department':
+              return departmentService.update(row.id, { name: row.name, status: targetStatus });
+            case 'production_line':
+              return productionLineService.update(row.id, { name: row.name, status: targetStatus });
+            case 'machine':
+              return machineService.update(row.id, { name: row.name, status: targetStatus });
+            case 'change_subtype':
+              return changeSubTypeService.update(row.id, { type: row.type, name: row.name, status: targetStatus });
+            case 'operator':
+              return operatorService.update(row.id, { name: row.name, status: targetStatus });
+            case 'skill':
+              return skillService.update(row.id, { name: row.name, status: targetStatus });
+            case 'operator_skill_map':
+              return operatorSkillMapService.update(row.id, { operator: row.type, skill: row.name, status: targetStatus });
+            case 'machine_skill_requirement':
+              return machineSkillRequirementService.update(row.id, { machine: row.type, skill: row.name, status: targetStatus });
+            case 'training_program':
+              return trainingProgramService.update(row.id, { skill: row.type, name: row.name, status: targetStatus });
+            case 'type_requirement':
+              return typeRequirementService.update(row.id, { type: row.type, name: row.name, status: targetStatus });
+            case 'type_action_template':
+              return typeActionTemplateService.update(row.id, { type: row.type, name: row.name, status: targetStatus });
+            default:
+              return Promise.resolve();
+          }
+        })
       );
       showSuccess(`${rowsToUpdate.length} entries marked as ${targetStatus}`);
       window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
@@ -1154,87 +1187,75 @@ const MastersPage = () => {
                     </thead>
                     <tbody>
                       {/* For Skill & Mapping Masters, group by (type, category) and join names */}
-                      {[
-                        'operator_skill_map',
-                        'machine_skill_requirement',
-                        'method_skill_map',
-                        'material_skill_map',
-                        'training_program',
-                      ].includes(activeConfig.category)
-                        ? (
-                          // Group rows by type, then join names
-                          Object.entries(
-                            currentRows.reduce((acc, row) => {
-                              const key = row.type || '';
-                              if (!acc[key]) acc[key] = [];
-                              acc[key].push(row);
-                              return acc;
-                            }, {})
-                          ).map(([type, rows]) => {
-                            // All rows have same status/type/category
-                            const status = rows[0].status;
-                            const id = rows.map(r => r.id).join('-');
-                            return (
-                              <tr key={id}>
-                                <td>
-                                  <input
-                                    type="checkbox"
-                                    checked={rows.every(r => selectedIds.includes(r.id))}
-                                    onChange={() => rows.forEach(r => toggleSelectRow(r.id))}
-                                  />
-                                </td>
-                                {activeConfig.needsType && <td>{type || '-'}</td>}
-                                <td className="break-words max-w-[280px]">{rows.map(r => r.name).join(', ')}</td>
-                                {shouldShowMappedSkills && (
-                                  <td className="max-w-[320px]">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
-                                  </td>
-                                )}
-                                <td>
-                                  <span
-                                    className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                      status === 'Active'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                    }`}
+                      {activeConfig.category === 'operator_skill_map' ? (
+                        // Group operatorSkillMaps by operator, then join skills
+                        Object.entries(
+                          currentRows.reduce((acc, row) => {
+                            const key = row.operator || '';
+                            if (!acc[key]) acc[key] = [];
+                            acc[key].push(row);
+                            return acc;
+                          }, {})
+                        ).map(([operator, rows]) => {
+                          const status = rows[0].status;
+                          const id = rows.map(r => r.id).join('-');
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={rows.every(r => selectedIds.includes(r.id))}
+                                  onChange={() => rows.forEach(r => toggleSelectRow(r.id))}
+                                />
+                              </td>
+                              <td>{operator || '-'}</td>
+                              <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
+                              <td className="max-w-[320px]">
+                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
+                              </td>
+                              <td>
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                    status === 'Active'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => toggleMasterStatus(rows[0])}
                                   >
-                                    {status || 'Active'}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="flex gap-2 flex-wrap">
-                                    {/* Edit/delete only for first row in group */}
-                                    <button
-                                      type="button"
-                                      className="btn-secondary disabled:opacity-60"
-                                      disabled={!canManageMasters || saving}
-                                      onClick={() => toggleMasterStatus(rows[0])}
-                                    >
-                                      {status === 'Active' ? 'Deactivate' : 'Activate'}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn-secondary disabled:opacity-60"
-                                      disabled={!canManageMasters}
-                                      onClick={() => setEditing({ ...rows[0] })}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="btn-danger disabled:opacity-60"
-                                      disabled={!canManageMasters || saving}
-                                      onClick={() => removeMaster(rows[0].id)}
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )
-                        : (
+                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canManageMasters}
+                                    onClick={() => setEditing({ ...rows[0] })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger disabled:opacity-60"
+                                    disabled={!canManageMasters || saving}
+                                    onClick={() => removeMaster(rows[0].id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
                           currentRows.map((item) => {
                             const mappedSkills = getMappedSkillsForItem(item);
                             return (

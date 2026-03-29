@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changeRequestService, fileService, masterService, riskLevelService } from '../services/api';
+import { changeRequestService, fileService, departmentService, productionLineService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, trainingProgramService, typeRequirementService, typeActionTemplateService, riskLevelService } from '../services/api';
 import { showError, showSuccess } from '../utils/helpers';
 import FormInput from '../components/FormInput';
 import Navbar from '../components/Navbar';
@@ -78,20 +78,32 @@ const CreateChange = () => {
   // Load masters and risk levels
   const loadMasters = useCallback(async () => {
     try {
-      const response = await masterService.getMasters({ status: 'Active' });
-      const rows = response.data.data || [];
-
-      const departments = rows.filter((r) => r.category === 'department').map((r) => r.name);
-      const productionLines = rows.filter((r) => r.category === 'production_line').map((r) => r.name);
-      const machines = rows.filter((r) => r.category === 'machine').map((r) => r.name);
-      const subtypes = rows.filter((r) => r.category === 'change_subtype');
-      const operators = rows.filter((r) => r.category === 'operator').map((r) => r.name);
-      const skills = rows.filter((r) => r.category === 'skill').map((r) => r.name);
-      const operatorSkillRows = rows.filter((r) => r.category === 'operator_skill_map');
-      const machineSkillRows = rows.filter((r) => r.category === 'machine_skill_requirement');
-      const trainingRows = rows.filter((r) => r.category === 'training_program');
-      const typeRequirementRows = rows.filter((r) => r.category === 'type_requirement');
-      const typeActionRows = rows.filter((r) => r.category === 'type_action_template');
+      const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes, riskLevelsRes] = await Promise.all([
+        departmentService.getAll(),
+        productionLineService.getAll(),
+        machineService.getAll(),
+        changeSubTypeService.getAll(),
+        operatorService.getAll(),
+        skillService.getAll(),
+        operatorSkillMapService.getAll(),
+        machineSkillRequirementService.getAll(),
+        trainingProgramService.getAll(),
+        typeRequirementService.getAll(),
+        typeActionTemplateService.getAll(),
+        riskLevelService.getAll(),
+      ]);
+      const departments = (departmentsRes.data.data || []).map((r) => r.name);
+      const productionLines = (productionLinesRes.data.data || []).map((r) => r.name);
+      const machines = (machinesRes.data.data || []).map((r) => r.name);
+      const subtypes = subtypesRes.data.data || [];
+      const operators = (operatorsRes.data.data || []).map((r) => r.name);
+      const skills = (skillsRes.data.data || []).map((r) => r.name);
+      const operatorSkillRows = operatorSkillMapsRes.data.data || [];
+      const machineSkillRows = machineSkillRequirementsRes.data.data || [];
+      const trainingRows = trainingProgramsRes.data.data || [];
+      const typeRequirementRows = typeRequirementsRes.data.data || [];
+      const typeActionRows = typeActionTemplatesRes.data.data || [];
+      const riskLevels = (riskLevelsRes.data.data || []).filter(l => l.status === 'Active').map(l => l.name);
 
       const grouped = subtypes.reduce((acc, item) => {
         const key = item.type || 'General';
@@ -101,21 +113,21 @@ const CreateChange = () => {
       }, {});
 
       const groupedOperatorSkills = operatorSkillRows.reduce((acc, item) => {
-        const key = item.type || 'Unknown Operator';
+        const key = item.operator || 'Unknown Operator';
         if (!acc[key]) acc[key] = [];
-        acc[key].push(item.name);
+        acc[key].push(item.skill);
         return acc;
       }, {});
 
       const groupedMachineSkills = machineSkillRows.reduce((acc, item) => {
-        const key = item.type || 'Unknown Machine';
+        const key = item.machine || 'Unknown Machine';
         if (!acc[key]) acc[key] = [];
-        acc[key].push(item.name);
+        acc[key].push(item.skill);
         return acc;
       }, {});
 
       const groupedTraining = trainingRows.reduce((acc, item) => {
-        const key = item.type || 'General';
+        const key = item.skill || 'General';
         if (!acc[key]) acc[key] = [];
         acc[key].push(item.name);
         return acc;
@@ -146,16 +158,9 @@ const CreateChange = () => {
       setTrainingPrograms(groupedTraining);
       setTypeRequirementsMap(groupedTypeRequirements);
       setTypeActionTemplateMap(groupedTypeActions);
+      if (riskLevels.length > 0) setRiskOptions(riskLevels);
     } catch (error) {
       // Keep fallback options when master API is unavailable.
-    }
-    // Fetch risk levels from backend
-    try {
-      const res = await riskLevelService.getAll();
-      const levels = (res.data?.data || []).filter(l => l.status === 'Active').map(l => l.name);
-      if (levels.length > 0) setRiskOptions(levels);
-    } catch (e) {
-      // fallback: do nothing
     }
   }, []);
 

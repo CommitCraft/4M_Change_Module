@@ -201,8 +201,10 @@ INSERT INTO master_data (category, type, name, status) VALUES
   ('risk_level', NULL, 'Low', 'Active'),
   ('operator', NULL, 'Operator 1', 'Active'),
   ('skill', NULL, 'Skill A', 'Active'),
-  ('operator_skill_map', NULL, 'Operator 1 - Skill A', 'Active'),
-  ('machine_skill_requirement', NULL, 'Machine 1 - Skill A', 'Active'),
+  ('operator_skill_map', 'Operator 1', 'Skill A', 'Active'),
+  ('operator_skill_map', 'Operator 2', 'Skill B', 'Active'),
+  ('machine_skill_requirement', 'Machine 1', 'Skill A', 'Active'),
+  ('machine_skill_requirement', 'Machine 2', 'Skill B', 'Active'),
   ('training_program', NULL, 'TP 1', 'Active'),
   ('type_requirement', NULL, 'Req 1', 'Active'),
   ('type_action_template', NULL, 'Action 1', 'Active');

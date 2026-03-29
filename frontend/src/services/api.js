@@ -4,60 +4,6 @@ export const riskLevelService = {
   update: (id, payload) => withConfirmation('Update risk level?', () => api.put(`/risk-levels/${id}`, payload)),
   delete: (id) => withConfirmation('Delete risk level?', () => api.delete(`/risk-levels/${id}`)),
 };
-// Legacy masterService for backward compatibility
-export const masterService = {
-  getMasters: async (params = {}) => {
-    // Fetch all master data types in parallel and return a combined array
-    try {
-      const [
-        departments,
-        productionLines,
-        machines,
-        changeSubTypes,
-        operators,
-        skills,
-        operatorSkillMaps,
-        machineSkillRequirements,
-        trainingPrograms,
-        typeRequirements,
-        typeActionTemplates,
-        riskLevels
-      ] = await Promise.all([
-        departmentService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
-        productionLineService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
-        machineService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
-        changeSubTypeService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'change_subtype' })) ),
-        operatorService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator' })) ),
-        skillService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'skill' })) ),
-        operatorSkillMapService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator_skill_map' })) ),
-        machineSkillRequirementService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine_skill_requirement' })) ),
-        trainingProgramService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'training_program' })) ),
-        typeRequirementService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_requirement' })) ),
-        typeActionTemplateService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_action_template' })) ),
-        riskLevelService.getAll(params).then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
-      ]);
-      return { data: [
-        ...departments,
-        ...productionLines,
-        ...machines,
-        ...changeSubTypes,
-        ...operators,
-        ...skills,
-        ...operatorSkillMaps,
-        ...machineSkillRequirements,
-        ...trainingPrograms,
-        ...typeRequirements,
-        ...typeActionTemplates,
-        ...riskLevels,
-      ] };
-    } catch (error) {
-      throw error;
-    }
-  },
-  createMaster: (payload) => departmentService.create(payload),
-  updateMaster: (id, payload) => departmentService.update(id, payload),
-  deleteMaster: (id) => departmentService.delete(id),
-};
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { guidedSetupService, masterService } from '../services/api';
+import { guidedSetupService, departmentService, productionLineService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, trainingProgramService, typeRequirementService, typeActionTemplateService } from '../services/api';
 import { showError, showSuccess, showInfo, showWarning } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 
@@ -157,8 +157,33 @@ const GuidedSetupPage = () => {
 
   const loadMasters = useCallback(async () => {
     try {
-      const response = await masterService.getMasters();
-      setAllMasters(response.data.data || []);
+      const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes] = await Promise.all([
+        departmentService.getAll(),
+        productionLineService.getAll(),
+        machineService.getAll(),
+        changeSubTypeService.getAll(),
+        operatorService.getAll(),
+        skillService.getAll(),
+        operatorSkillMapService.getAll(),
+        machineSkillRequirementService.getAll(),
+        trainingProgramService.getAll(),
+        typeRequirementService.getAll(),
+        typeActionTemplateService.getAll(),
+      ]);
+      const allMasters = [
+        ...(departmentsRes.data.data || []).map((r) => ({ ...r, category: 'department' })),
+        ...(productionLinesRes.data.data || []).map((r) => ({ ...r, category: 'production_line' })),
+        ...(machinesRes.data.data || []).map((r) => ({ ...r, category: 'machine' })),
+        ...(subtypesRes.data.data || []).map((r) => ({ ...r, category: 'change_subtype' })),
+        ...(operatorsRes.data.data || []).map((r) => ({ ...r, category: 'operator' })),
+        ...(skillsRes.data.data || []).map((r) => ({ ...r, category: 'skill' })),
+        ...(operatorSkillMapsRes.data.data || []).map((r) => ({ ...r, category: 'operator_skill_map' })),
+        ...(machineSkillRequirementsRes.data.data || []).map((r) => ({ ...r, category: 'machine_skill_requirement' })),
+        ...(trainingProgramsRes.data.data || []).map((r) => ({ ...r, category: 'training_program' })),
+        ...(typeRequirementsRes.data.data || []).map((r) => ({ ...r, category: 'type_requirement' })),
+        ...(typeActionTemplatesRes.data.data || []).map((r) => ({ ...r, category: 'type_action_template' })),
+      ];
+      setAllMasters(allMasters);
     } catch (error) {
       showError('Failed to load master options');
     }
