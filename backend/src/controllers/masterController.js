@@ -1,4 +1,5 @@
-import { MasterData } from '../models/index.js';
+import models from '../models/index.js';
+const { MasterData } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 export const getMasters = async (req, res) => {

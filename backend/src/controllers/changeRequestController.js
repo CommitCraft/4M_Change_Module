@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
-import { ChangeRequest, Approval, AuditLog, Attachment, User, Role, MasterData } from '../models/index.js';
+import models from '../models/index.js';
+const { ChangeRequest, Approval, AuditLog, Attachment, User, Role, MasterData } = models;
 import { sendResponse, sendError } from '../utils/response.js';
 
 const resolveManSkillAssessment = async (payload, existingRequest = null) => {

@@ -1,4 +1,5 @@
-import { GuidedSetupProgress } from '../models/index.js';
+import models from '../models/index.js';
+const { GuidedSetupProgress } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 const FLOW_TYPES = ['Man', 'Machine', 'Method', 'Material'];

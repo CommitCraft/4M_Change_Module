@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { riskLevelService } from '../services/api';
 // Custom MultiSelectDropdown component for skills
 const MultiSelectDropdown = ({ options, selected, onChange, placeholder }) => {
   const [open, setOpen] = useState(false);
@@ -61,7 +62,19 @@ const MultiSelectDropdown = ({ options, selected, onChange, placeholder }) => {
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { masterService } from '../services/api';
+import {
+  departmentService,
+  productionLineService,
+  machineService,
+  changeSubTypeService,
+  operatorService,
+  skillService,
+  operatorSkillMapService,
+  machineSkillRequirementService,
+  trainingProgramService,
+  typeRequirementService,
+  typeActionTemplateService,
+} from '../services/api';
 import Modal from '../components/Modal';
 import { showError, showSuccess } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
@@ -192,11 +205,38 @@ const MastersPage = () => {
     [allMasters]
   );
 
+  // Fetch all master data from normalized tables and merge into a single array for UI compatibility
   const fetchMasters = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const response = await masterService.getMasters();
-      setAllMasters(response.data.data || []);
+      const [departments, productionLines, machines, changeSubTypes, operators, skills, operatorSkillMaps, machineSkillRequirements, trainingPrograms, typeRequirements, typeActionTemplates, riskLevels] = await Promise.all([
+        departmentService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
+        productionLineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
+        machineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
+        changeSubTypeService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'change_subtype' })) ),
+        operatorService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator' })) ),
+        skillService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'skill' })) ),
+        operatorSkillMapService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator_skill_map' })) ),
+        machineSkillRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine_skill_requirement' })) ),
+        trainingProgramService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'training_program' })) ),
+        typeRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_requirement' })) ),
+        typeActionTemplateService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_action_template' })) ),
+        riskLevelService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
+      ]);
+      setAllMasters([
+        ...departments,
+        ...productionLines,
+        ...machines,
+        ...changeSubTypes,
+        ...operators,
+        ...skills,
+        ...operatorSkillMaps,
+        ...machineSkillRequirements,
+        ...trainingPrograms,
+        ...typeRequirements,
+        ...typeActionTemplates,
+        ...riskLevels,
+      ]);
     } catch (error) {
       showError('Failed to fetch masters');
     } finally {
@@ -361,12 +401,35 @@ const MastersPage = () => {
       setSaving(true);
       const results = await Promise.allSettled(
         names.map((name) =>
-          masterService.createMaster({
-            category: activeConfig.category,
-            type: activeConfig.needsType ? payload.type : null,
-            name,
-            status: payload.status || 'Active',
-          })
+          // Use correct service for each master type
+          (() => {
+            switch (activeConfig.category) {
+              case 'department':
+                return departmentService.create({ name, status: payload.status || 'Active' });
+              case 'production_line':
+                return productionLineService.create({ name, status: payload.status || 'Active' });
+              case 'machine':
+                return machineService.create({ name, status: payload.status || 'Active' });
+              case 'change_subtype':
+                return changeSubTypeService.create({ type: payload.type, name, status: payload.status || 'Active' });
+              case 'operator':
+                return operatorService.create({ name, status: payload.status || 'Active' });
+              case 'skill':
+                return skillService.create({ name, status: payload.status || 'Active' });
+              case 'operator_skill_map':
+                return operatorSkillMapService.create({ operator: payload.type, skill: name, status: payload.status || 'Active' });
+              case 'machine_skill_requirement':
+                return machineSkillRequirementService.create({ machine: payload.type, skill: name, status: payload.status || 'Active' });
+              case 'training_program':
+                return trainingProgramService.create({ skill: payload.type, name, status: payload.status || 'Active' });
+              case 'type_requirement':
+                return typeRequirementService.create({ type: payload.type, name, status: payload.status || 'Active' });
+              case 'type_action_template':
+                return typeActionTemplateService.create({ type: payload.type, name, status: payload.status || 'Active' });
+              default:
+                return Promise.reject(new Error('Unknown master type'));
+            }
+          })()
         )
       );
 
@@ -411,12 +474,44 @@ const MastersPage = () => {
 
     try {
       setSaving(true);
-      await masterService.updateMaster(editing.id, {
-        category: editing.category,
-        type: activeConfig.needsType ? editing.type : null,
-        name: editing.name.trim(),
-        status: editing.status || 'Active',
-      });
+      // Use correct service for each master type
+      switch (activeConfig.category) {
+        case 'department':
+          await departmentService.update(editing.id, { name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'production_line':
+          await productionLineService.update(editing.id, { name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'machine':
+          await machineService.update(editing.id, { name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'change_subtype':
+          await changeSubTypeService.update(editing.id, { type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'operator':
+          await operatorService.update(editing.id, { name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'skill':
+          await skillService.update(editing.id, { name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'operator_skill_map':
+          await operatorSkillMapService.update(editing.id, { operator: editing.type, skill: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'machine_skill_requirement':
+          await machineSkillRequirementService.update(editing.id, { machine: editing.type, skill: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'training_program':
+          await trainingProgramService.update(editing.id, { skill: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'type_requirement':
+          await typeRequirementService.update(editing.id, { type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'type_action_template':
+          await typeActionTemplateService.update(editing.id, { type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        default:
+          throw new Error('Unknown master type');
+      }
       showSuccess('Master entry updated');
       window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
       setEditing(null);
@@ -436,7 +531,44 @@ const MastersPage = () => {
 
     try {
       setSaving(true);
-      await masterService.deleteMaster(id);
+      // Use correct service for each master type
+      switch (activeConfig.category) {
+        case 'department':
+          await departmentService.delete(id);
+          break;
+        case 'production_line':
+          await productionLineService.delete(id);
+          break;
+        case 'machine':
+          await machineService.delete(id);
+          break;
+        case 'change_subtype':
+          await changeSubTypeService.delete(id);
+          break;
+        case 'operator':
+          await operatorService.delete(id);
+          break;
+        case 'skill':
+          await skillService.delete(id);
+          break;
+        case 'operator_skill_map':
+          await operatorSkillMapService.delete(id);
+          break;
+        case 'machine_skill_requirement':
+          await machineSkillRequirementService.delete(id);
+          break;
+        case 'training_program':
+          await trainingProgramService.delete(id);
+          break;
+        case 'type_requirement':
+          await typeRequirementService.delete(id);
+          break;
+        case 'type_action_template':
+          await typeActionTemplateService.delete(id);
+          break;
+        default:
+          throw new Error('Unknown master type');
+      }
       showSuccess('Master entry deleted');
       window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
       fetchMasters();
@@ -456,12 +588,44 @@ const MastersPage = () => {
     try {
       setSaving(true);
       const nextStatus = item.status === 'Active' ? 'Inactive' : 'Active';
-      await masterService.updateMaster(item.id, {
-        category: item.category,
-        type: item.type || null,
-        name: item.name,
-        status: nextStatus,
-      });
+      // Use correct service for each master type
+      switch (activeConfig.category) {
+        case 'department':
+          await departmentService.update(item.id, { name: item.name, status: nextStatus });
+          break;
+        case 'production_line':
+          await productionLineService.update(item.id, { name: item.name, status: nextStatus });
+          break;
+        case 'machine':
+          await machineService.update(item.id, { name: item.name, status: nextStatus });
+          break;
+        case 'change_subtype':
+          await changeSubTypeService.update(item.id, { type: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'operator':
+          await operatorService.update(item.id, { name: item.name, status: nextStatus });
+          break;
+        case 'skill':
+          await skillService.update(item.id, { name: item.name, status: nextStatus });
+          break;
+        case 'operator_skill_map':
+          await operatorSkillMapService.update(item.id, { operator: item.type, skill: item.name, status: nextStatus });
+          break;
+        case 'machine_skill_requirement':
+          await machineSkillRequirementService.update(item.id, { machine: item.type, skill: item.name, status: nextStatus });
+          break;
+        case 'training_program':
+          await trainingProgramService.update(item.id, { skill: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'type_requirement':
+          await typeRequirementService.update(item.id, { type: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'type_action_template':
+          await typeActionTemplateService.update(item.id, { type: item.type, name: item.name, status: nextStatus });
+          break;
+        default:
+          throw new Error('Unknown master type');
+      }
       showSuccess(`Entry marked as ${nextStatus}`);
       window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
       fetchMasters();
@@ -562,12 +726,7 @@ const MastersPage = () => {
       setSaving(true);
       const results = await Promise.allSettled(
         names.map((name) =>
-          masterService.createMaster({
-            category: 'change_subtype',
-            type: parentType,
-            name,
-            status: 'Active',
-          })
+          changeSubTypeService.create({ type: parentType, name, status: 'Active' })
         )
       );
 

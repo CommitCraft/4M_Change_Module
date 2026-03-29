@@ -1,6 +1,7 @@
 import { verifyToken } from '../utils/jwt.js';
 import { sendError } from '../utils/response.js';
-import { User, Role, RolePermission } from '../models/index.js';
+import models from '../models/index.js';
+const { User, Role, RolePermission } = models;
 
 export const authMiddleware = async (req, res, next) => {
   try {

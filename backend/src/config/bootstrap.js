@@ -1,7 +1,8 @@
 import mysql from 'mysql2/promise';
 import { DataTypes } from 'sequelize';
 import sequelize, { connectDatabase } from './database.js';
-import { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData } from '../models/index.js';
+import models from '../models/index.js';
+const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData } = models;
 import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
 
 const ALL_ROLES = ['SuperAdmin', 'Admin', 'Manager', 'User'];
@@ -122,11 +123,20 @@ export const seedCoreData = async () => {
   });
 
   if (!existingSuperAdmin) {
+    // Assign SuperAdmin to the first department if available
+    let departmentId = null;
+    try {
+      const [firstDept] = await sequelize.query('SELECT id FROM departments ORDER BY id ASC LIMIT 1', { type: sequelize.QueryTypes.SELECT });
+      if (firstDept && firstDept.id) departmentId = firstDept.id;
+    } catch (e) {
+      // If departments table does not exist or is empty, leave departmentId null
+    }
     await User.create({
       name: 'System SuperAdmin',
       email: superAdminEmail,
       password: superAdminPassword,
       role_id: superAdminRole.id,
+      department_id: departmentId,
     });
   }
 
@@ -146,127 +156,9 @@ export const seedCoreData = async () => {
   }
 };
 
+// Auto-create all tables as per Sequelize models
 export const ensureTablesFromConfig = async () => {
-  try {
-    await sequelize.query('ALTER TABLE roles MODIFY COLUMN name VARCHAR(100) NOT NULL UNIQUE');
-  } catch (error) {
-    // Ignore when table does not exist yet; sync will create it with the latest model definition.
-  }
-
-  try {
-    await sequelize.query(
-      "ALTER TABLE change_requests MODIFY COLUMN risk_level ENUM('Low','Medium','High','Critical') NOT NULL"
-    );
-  } catch (error) {
-    // Ignore when table does not exist yet.
-  }
-
-  try {
-    await sequelize.query(
-      "ALTER TABLE change_requests MODIFY COLUMN status ENUM('Pending','Approved','Rejected','Implemented','Closed') NOT NULL DEFAULT 'Pending'"
-    );
-  } catch (error) {
-    // Ignore when table does not exist yet.
-  }
-
-  try {
-    await sequelize.query(
-      "ALTER TABLE master_data MODIFY COLUMN category ENUM('department','machine','change_subtype','risk_level','operator','skill','operator_skill_map','machine_skill_requirement','training_program','type_requirement','type_action_template') NOT NULL"
-    );
-  } catch (error) {
-    // Ignore when table does not exist yet.
-  }
-
-  try {
-    await sequelize.query("ALTER TABLE master_data MODIFY COLUMN status ENUM('Active','Inactive') NOT NULL DEFAULT 'Active'");
-  } catch (error) {
-    // Ignore when table does not exist yet.
-  }
-
-  // All table creation is driven from Sequelize model configuration.
-  await sequelize.sync();
-
-  const queryInterface = sequelize.getQueryInterface();
-
-  // Backfill legacy databases that were created before 4M schema expansion.
-  const changeRequestColumns = await queryInterface.describeTable('change_requests');
-  const legacyColumnAdds = [
-    ['request_no', { type: DataTypes.STRING(50), allowNull: true }],
-    ['request_date', { type: DataTypes.DATEONLY, allowNull: true }],
-    ['production_line', { type: DataTypes.STRING(120), allowNull: true }],
-    ['machine', { type: DataTypes.STRING(120), allowNull: true }],
-    ['sub_type', { type: DataTypes.STRING(120), allowNull: true }],
-    ['old_value', { type: DataTypes.TEXT, allowNull: true }],
-    ['new_value', { type: DataTypes.TEXT, allowNull: true }],
-    ['quality_impact', { type: DataTypes.ENUM('Low', 'Medium', 'High'), allowNull: true }],
-    ['cost_impact', { type: DataTypes.ENUM('Low', 'Medium', 'High'), allowNull: true }],
-    ['delivery_impact', { type: DataTypes.ENUM('Low', 'Medium', 'High'), allowNull: true }],
-    ['safety_impact', { type: DataTypes.ENUM('Low', 'Medium', 'High'), allowNull: true }],
-    ['monitoring_period', { type: DataTypes.STRING(120), allowNull: true }],
-    ['quality_result', { type: DataTypes.STRING(200), allowNull: true }],
-    ['defect_rate', { type: DataTypes.STRING(50), allowNull: true }],
-    ['monitoring_comments', { type: DataTypes.TEXT, allowNull: true }],
-    ['current_operator', { type: DataTypes.STRING(120), allowNull: true }],
-    ['proposed_operator', { type: DataTypes.STRING(120), allowNull: true }],
-    ['required_skills', { type: DataTypes.TEXT, allowNull: true }],
-    ['proposed_operator_skill_status', { type: DataTypes.ENUM('Matched', 'Gap'), allowNull: true }],
-    ['training_required', { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }],
-    [
-      'training_status',
-      {
-        type: DataTypes.ENUM('Not Required', 'Pending', 'Scheduled', 'Completed'),
-        allowNull: true,
-        defaultValue: 'Not Required',
-      },
-    ],
-    ['training_notes', { type: DataTypes.TEXT, allowNull: true }],
-      ['compliance_requirements', { type: DataTypes.TEXT, allowNull: true }],
-      ['action_plan_required', { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }],
-      ['action_plan_notes', { type: DataTypes.TEXT, allowNull: true }],
-  ];
-
-  for (const [columnName, columnConfig] of legacyColumnAdds) {
-    if (!changeRequestColumns[columnName]) {
-      await queryInterface.addColumn('change_requests', columnName, columnConfig);
-    }
-  }
-
-    const guidedProgressColumns = await queryInterface.describeTable('guided_setup_progress');
-    if (!guidedProgressColumns.draft_forms) {
-      await queryInterface.addColumn('guided_setup_progress', 'draft_forms', {
-        type: DataTypes.JSON,
-        allowNull: false,
-        defaultValue: {},
-      });
-    }
-
-  const masterDataColumns = await queryInterface.describeTable('master_data');
-  if (!masterDataColumns.status) {
-    await queryInterface.addColumn('master_data', 'status', {
-      type: DataTypes.ENUM('Active', 'Inactive'),
-      allowNull: false,
-      defaultValue: 'Active',
-    });
-  }
-
-  const tables = await queryInterface.showAllTables();
-  const normalized = new Set(tables.map((table) => (typeof table === 'string' ? table : table.tableName)));
-
-  const missingTables = REQUIRED_TABLES.filter((tableName) => !normalized.has(tableName));
-  if (missingTables.length > 0) {
-    // Retry once in case some tables were pending due to order/association timing.
-    await sequelize.sync();
-
-    const tablesAfterRetry = await queryInterface.showAllTables();
-    const normalizedAfterRetry = new Set(
-      tablesAfterRetry.map((table) => (typeof table === 'string' ? table : table.tableName))
-    );
-
-    const stillMissing = REQUIRED_TABLES.filter((tableName) => !normalizedAfterRetry.has(tableName));
-    if (stillMissing.length > 0) {
-      throw new Error(`Table creation failed for: ${stillMissing.join(', ')}`);
-    }
-  }
+  await sequelize.sync({ alter: false });
 };
 
 export const seedDemoDataIfNeeded = async () => {

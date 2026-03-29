@@ -1,4 +1,5 @@
-import { User, Role, RolePermission } from '../models/index.js';
+import models from '../models/index.js';
+const { User, Role, RolePermission } = models;
 import { generateToken } from '../utils/jwt.js';
 import { sendResponse, sendError } from '../utils/response.js';
 

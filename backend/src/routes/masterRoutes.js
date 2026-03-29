@@ -43,6 +43,7 @@ router.get(
     .optional()
     .isIn([
       'department',
+      'production_line',
       'machine',
       'change_subtype',
       'risk_level',
@@ -69,6 +70,7 @@ router.post(
   body('category')
     .isIn([
       'department',
+      'production_line',
       'machine',
       'change_subtype',
       'risk_level',

@@ -1,4 +1,5 @@
-import { Role, RolePermission, User } from '../models/index.js';
+import models from '../models/index.js';
+const { Role, RolePermission, User } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 import { ADMIN_MANDATORY_PERMISSIONS, ALL_PERMISSIONS } from '../utils/permissions.js';
 

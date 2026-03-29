@@ -1,4 +1,5 @@
-import { sequelize, Approval, AuditLog, ChangeRequest, User, Role } from '../models/index.js';
+import models from '../models/index.js';
+const { sequelize, Approval, AuditLog, ChangeRequest, User, Role } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 const APPROVAL_STEPS = [

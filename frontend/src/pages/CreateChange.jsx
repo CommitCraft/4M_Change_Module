@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changeRequestService, fileService, masterService } from '../services/api';
+import { changeRequestService, fileService, masterService, riskLevelService } from '../services/api';
 import { showError, showSuccess } from '../utils/helpers';
 import FormInput from '../components/FormInput';
 import Navbar from '../components/Navbar';
@@ -8,7 +8,7 @@ import Sidebar from '../components/Sidebar';
 import { FOUR_M_TYPES, getSubCategoriesByType } from '../utils/changeCategories';
 
 const IMPACT_LEVELS = ['Low', 'Medium', 'High'];
-const RISK_LEVELS = ['Low', 'Medium', 'High', 'Critical'];
+
 
 const CreateChange = () => {
   const generatedRequestNo = useMemo(() => {
@@ -56,7 +56,7 @@ const CreateChange = () => {
   const [departmentOptions, setDepartmentOptions] = useState(['Production', 'Quality', 'Maintenance']);
   const [productionLineOptions, setProductionLineOptions] = useState([]);
   const [machineOptions, setMachineOptions] = useState(['MCH-1001', 'MCH-1002']);
-  const [riskOptions, setRiskOptions] = useState(RISK_LEVELS);
+  const [riskOptions, setRiskOptions] = useState([]);
   const [subtypeOptions, setSubtypeOptions] = useState({});
   const [operatorOptions, setOperatorOptions] = useState([]);
   const [skillOptions, setSkillOptions] = useState([]);
@@ -74,7 +74,8 @@ const CreateChange = () => {
   const [typeGovernance, setTypeGovernance] = useState({ requirements: [], actionTemplates: [] });
   const navigate = useNavigate();
 
-  // Load masters and refresh on event
+
+  // Load masters and risk levels
   const loadMasters = useCallback(async () => {
     try {
       const response = await masterService.getMasters({ status: 'Active' });
@@ -83,7 +84,6 @@ const CreateChange = () => {
       const departments = rows.filter((r) => r.category === 'department').map((r) => r.name);
       const productionLines = rows.filter((r) => r.category === 'production_line').map((r) => r.name);
       const machines = rows.filter((r) => r.category === 'machine').map((r) => r.name);
-      const risks = rows.filter((r) => r.category === 'risk_level').map((r) => r.name);
       const subtypes = rows.filter((r) => r.category === 'change_subtype');
       const operators = rows.filter((r) => r.category === 'operator').map((r) => r.name);
       const skills = rows.filter((r) => r.category === 'skill').map((r) => r.name);
@@ -138,7 +138,6 @@ const CreateChange = () => {
       if (departments.length > 0) setDepartmentOptions(departments);
       if (productionLines.length > 0) setProductionLineOptions(productionLines);
       if (machines.length > 0) setMachineOptions(machines);
-      if (risks.length > 0) setRiskOptions(risks);
       if (Object.keys(grouped).length > 0) setSubtypeOptions(grouped);
       if (operators.length > 0) setOperatorOptions(operators);
       if (skills.length > 0) setSkillOptions(skills);
@@ -149,6 +148,14 @@ const CreateChange = () => {
       setTypeActionTemplateMap(groupedTypeActions);
     } catch (error) {
       // Keep fallback options when master API is unavailable.
+    }
+    // Fetch risk levels from backend
+    try {
+      const res = await riskLevelService.getAll();
+      const levels = (res.data?.data || []).filter(l => l.status === 'Active').map(l => l.name);
+      if (levels.length > 0) setRiskOptions(levels);
+    } catch (e) {
+      // fallback: do nothing
     }
   }, []);
 

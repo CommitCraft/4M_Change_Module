@@ -1,4 +1,16 @@
+
 import sequelize from '../config/database.js';
+import RiskLevel from './RiskLevel.js';
+import TypeActionTemplate from './TypeActionTemplate.js';
+import TypeRequirement from './TypeRequirement.js';
+import TrainingProgram from './TrainingProgram.js';
+import MachineSkillRequirement from './MachineSkillRequirement.js';
+import OperatorSkillMap from './OperatorSkillMap.js';
+import Skill from './Skill.js';
+import Operator from './Operator.js';
+import ChangeSubType from './ChangeSubType.js';
+import ProductionLine from './ProductionLine.js';
+import Machine from './Machine.js';
 import Role from './Role.js';
 import RolePermission from './RolePermission.js';
 import User from './User.js';
@@ -8,6 +20,7 @@ import AuditLog from './AuditLog.js';
 import Attachment from './Attachment.js';
 import MasterData from './MasterData.js';
 import GuidedSetupProgress from './GuidedSetupProgress.js';
+import Department from './Department.js';
 
 Role.hasMany(User, { foreignKey: 'role_id' });
 User.belongsTo(Role, { foreignKey: 'role_id' });
@@ -30,9 +43,13 @@ ChangeRequest.hasMany(AuditLog, { foreignKey: 'request_id' });
 
 User.hasMany(GuidedSetupProgress, { foreignKey: 'user_id' });
 GuidedSetupProgress.belongsTo(User, { foreignKey: 'user_id' });
+Department.hasMany(User, { foreignKey: 'department_id' });
+User.belongsTo(Department, { foreignKey: 'department_id' });
 
-export {
+// ...existing code...
+export default {
   sequelize,
+  Department,
   Role,
   RolePermission,
   User,
@@ -42,4 +59,15 @@ export {
   Attachment,
   MasterData,
   GuidedSetupProgress,
+  ProductionLine,
+  Machine,
+  ChangeSubType,
+  TypeActionTemplate,
+  TypeRequirement,
+  TrainingProgram,
+  MachineSkillRequirement,
+  OperatorSkillMap,
+  Skill,
+  Operator,
+  RiskLevel
 };

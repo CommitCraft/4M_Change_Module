@@ -1,3 +1,95 @@
+// TypeActionTemplate validation
+export const typeActionTemplateValidation = [
+  body('type').trim().notEmpty().isLength({ min: 2, max: 50 }).withMessage('Type is required and must be 2-50 characters'),
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Action template name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// TypeRequirement validation
+export const typeRequirementValidation = [
+  body('type').trim().notEmpty().isLength({ min: 2, max: 50 }).withMessage('Type is required and must be 2-50 characters'),
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Requirement name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// TrainingProgram validation
+export const trainingProgramValidation = [
+  body('skill').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Skill is required and must be 2-120 characters'),
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Training program name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// MachineSkillRequirement validation
+export const machineSkillRequirementValidation = [
+  body('machine').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Machine is required and must be 2-120 characters'),
+  body('skill').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Skill is required and must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// OperatorSkillMap validation
+export const operatorSkillMapValidation = [
+  body('operator').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Operator is required and must be 2-120 characters'),
+  body('skill').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Skill is required and must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// Skill validation
+export const skillValidation = [
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Skill name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// Operator validation
+export const operatorValidation = [
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Operator name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// ChangeSubType validation
+export const changeSubTypeValidation = [
+  body('type').trim().notEmpty().isLength({ min: 2, max: 50 }).withMessage('Type is required and must be 2-50 characters'),
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Change subtype name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// Machine validation
+export const machineValidation = [
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Machine name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+// ProductionLine validation
+export const productionLineValidation = [
+  body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Production line name must be 2-120 characters'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+];
+
+
+// Dynamic validator for use in routes
+export const getValidationForSchema = (schema) => {
+  switch (schema) {
+    case 'productionLine':
+      return [...productionLineValidation, validateRequest];
+    case 'department':
+      return [
+        body('name').trim().notEmpty().isLength({ min: 2, max: 120 }).withMessage('Department name must be 2-120 characters'),
+        body('status').optional().isIn(['Active', 'Inactive']).withMessage('Status must be Active or Inactive'),
+        validateRequest
+      ];
+    case 'machine':
+      return [...machineValidation, validateRequest];
+    case 'changeSubType':
+      return [...changeSubTypeValidation, validateRequest];
+    case 'operator':
+      return [...operatorValidation, validateRequest];
+    case 'skill':
+      return [...skillValidation, validateRequest];
+    case 'operatorSkillMap':
+      return [...operatorSkillMapValidation, validateRequest];
+    case 'machineSkillRequirement':
+      return [...machineSkillRequirementValidation, validateRequest];
+    case 'trainingProgram':
+      return [...trainingProgramValidation, validateRequest];
+    case 'typeRequirement':
+      return [...typeRequirementValidation, validateRequest];
+    case 'typeActionTemplate':
+      return [...typeActionTemplateValidation, validateRequest];
+    // Add more cases for other master types as needed
+    default:
+      return [validateRequest];
+  }
+};
 import { body, param, validationResult, query } from 'express-validator';
 import { sendError } from '../utils/response.js';
 import { ALL_PERMISSIONS } from '../utils/permissions.js';

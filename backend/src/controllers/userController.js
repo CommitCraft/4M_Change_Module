@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
-import { Role, User } from '../models/index.js';
+import models from '../models/index.js';
+const { Role, User } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 export const getUsers = async (req, res) => {

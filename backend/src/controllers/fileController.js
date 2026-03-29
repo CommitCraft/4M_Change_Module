@@ -1,4 +1,5 @@
-import { Attachment, AuditLog, ChangeRequest } from '../models/index.js';
+import models from '../models/index.js';
+const { Attachment, AuditLog, ChangeRequest } = models;
 import { sendResponse, sendError } from '../utils/response.js';
 import path from 'path';
 import fs from 'fs';

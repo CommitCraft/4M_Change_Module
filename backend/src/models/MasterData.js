@@ -13,6 +13,7 @@ MasterData.init(
     category: {
       type: DataTypes.ENUM(
         'department',
+        'production_line',
         'machine',
         'change_subtype',
         'risk_level',
