@@ -289,6 +289,7 @@ const CreateChange = () => {
     setLoading(true);
 
     try {
+      // Remove proposed_operator_skill_status if empty string
       const payload = {
         ...formData,
         description: formData.sub_type
@@ -303,6 +304,9 @@ const CreateChange = () => {
           `Safety Impact: ${formData.safety_impact}`,
         ].join('\n'),
       };
+      if (payload.proposed_operator_skill_status === '') {
+        delete payload.proposed_operator_skill_status;
+      }
 
       const response = await changeRequestService.createChangeRequest(payload);
       const requestId = response.data.data.id;
@@ -601,7 +605,18 @@ const CreateChange = () => {
               {files.length > 0 && (
                 <ul className="mt-2 text-sm text-gray-600 dark:text-gray-400">
                   {files.map((file, idx) => (
-                    <li key={idx}>✓ {file.name}</li>
+                    <li key={idx} style={{ marginBottom: '8px' }}>
+                      ✓ {file.name}
+                      {file.type && file.type.startsWith('image/') && (
+                        <div style={{ marginTop: '4px' }}>
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '6px', border: '1px solid #ccc' }}
+                          />
+                        </div>
+                      )}
+                    </li>
                   ))}
                 </ul>
               )}

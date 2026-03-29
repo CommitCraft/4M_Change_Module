@@ -46,17 +46,17 @@ export const authService = {
 };
 
 export const changeRequestService = {
-  createChangeRequest: (data) => withConfirmation('Create this change request?', () => api.post('/change', data)),
+  createChangeRequest: (data) => withConfirmation('Create this change request?', () => api.post('/change-requests', data)),
   getChangeRequests: (filters = {}) =>
-    api.get('/change', { params: filters }),
+    api.get('/change-requests', { params: filters }),
   getChangeRequestById: (id) =>
-    api.get(`/change/${id}`),
+    api.get(`/change-requests/${id}`),
   updateChangeRequest: (id, data) =>
-    withConfirmation('Update this change request?', () => api.put(`/change/${id}`, data)),
+    withConfirmation('Update this change request?', () => api.put(`/change-requests/${id}`, data)),
   deleteChangeRequest: (id) =>
-    withConfirmation('Delete this change request?', () => api.delete(`/change/${id}`)),
+    withConfirmation('Delete this change request?', () => api.delete(`/change-requests/${id}`)),
   getDashboardStats: () =>
-    api.get('/change/dashboard/stats'),
+    api.get('/change-requests/dashboard/stats'),
 };
 
 export const approvalService = {
