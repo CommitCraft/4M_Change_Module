@@ -218,9 +218,14 @@ CREATE TABLE change_sub_types (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
+
 INSERT INTO change_sub_types (type, name, status) VALUES
   ('Man', 'SubType 1', 'Active'),
-  ('Machine', 'SubType 2', 'Active');
+  ('Machine', 'SubType 2', 'Active'),
+  ('Method', 'SubType 3', 'Active'),
+  ('Material', 'SubType 4', 'Active'),
+  ('Machine', 'SubType 5', 'Inactive'),
+  ('Man', 'SubType 6', 'Active');
 
 -- Guided Setup Progress
 CREATE TABLE guided_setup_progress (
@@ -277,6 +282,8 @@ CREATE TABLE change_requests (
   department VARCHAR(120) NOT NULL,
   status ENUM('Pending','Approved','Rejected','Implemented','Closed') NOT NULL DEFAULT 'Pending',
   created_by INT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (created_by) REFERENCES users(id)
 );
 INSERT INTO change_requests (type, title, description, current_state, proposed_change, reason, impact_analysis, risk_level, department, status, created_by) VALUES
@@ -299,12 +306,12 @@ INSERT INTO approvals (request_id, approver_id, status, remarks) VALUES
   (1, 2, 'Pending', 'Initial approval');
 
 -- Attachments
-CREATE TABLE attachments (
+CREATE TABLE if not exists attachments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   request_id INT NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (request_id) REFERENCES change_requests(id)
 );
 INSERT INTO attachments (request_id, file_path) VALUES

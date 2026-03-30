@@ -21,7 +21,7 @@ const ChangeSubType = sequelize.define('ChangeSubType', {
     defaultValue: 'Active',
   },
 }, {
-  tableName: 'change_subtypes',
+  tableName: 'change_sub_types',
   timestamps: true,
   underscored: true,
 });
