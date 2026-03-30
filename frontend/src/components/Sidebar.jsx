@@ -17,8 +17,7 @@ const Sidebar = ({ isOpen }) => {
     { path: '/dashboard', label: 'Dashboard', icon: AiFillHome, permission: 'dashboard.view' },
     { path: '/create', label: 'Create Request', icon: FaChartBar, permission: 'changes.create' },
     { path: '/changes', label: 'All Requests', icon: AiFillFile, permission: 'changes.read' },
-    { path: '/reviews', label: 'Pending Reviews', icon: FaClipboardCheck, permission: 'approvals.approve' },
-    { path: '/approvals', label: 'Pending Approvals', icon: AiFillCheckCircle, permission: 'approvals.approve' },
+    // Removed Pending Reviews and Pending Approvals from sidebar
     { path: '/implementation', label: 'Implementation', icon: FaTools, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
     { path: '/monitoring', label: 'Monitoring', icon: FaChartLine, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
     { path: '/reports', label: 'Reports', icon: FaChartBar, permission: 'changes.read' },
