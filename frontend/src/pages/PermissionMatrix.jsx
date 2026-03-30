@@ -19,10 +19,27 @@ const PermissionMatrix = () => {
   const [roleGroupSelection, setRoleGroupSelection] = useState({});
   const [globalGroupSelection, setGlobalGroupSelection] = useState(Object.keys(PERMISSION_GROUPS)[0] || '');
 
+  // Custom order for master CRUD columns
+  const customGroupOrder = [
+    'Dashboard',
+    'Changes',
+    'Approvals',
+    'Users',
+    'Roles',
+    'Attachments',
+    'Masters - Department',
+    'Masters - Machine',
+    'Masters - Production Line',
+    'Masters - Skill',
+    '4M Guided Setup - Man',
+    '4M Guided Setup - Machine',
+    '4M Guided Setup - Method',
+    '4M Guided Setup - Material',
+  ];
   const groupedPermissions = useMemo(() => {
-    return Object.entries(PERMISSION_GROUPS).flatMap(([group, permissions]) =>
-      permissions.map((permission) => ({ group, permission }))
-    );
+    return customGroupOrder
+      .filter(group => Object.keys(PERMISSION_GROUPS).includes(group))
+      .flatMap(group => PERMISSION_GROUPS[group].map(permission => ({ group, permission })));
   }, []);
 
   const normalizePermissions = (permissions = []) =>
@@ -30,7 +47,7 @@ const PermissionMatrix = () => {
 
   const permissionsKey = (permissions = []) => normalizePermissions(permissions).join('|');
 
-  const groupOptions = useMemo(() => ['All', ...Object.keys(PERMISSION_GROUPS)], []);
+  const groupOptions = useMemo(() => ['All', ...customGroupOrder.filter(g => Object.keys(PERMISSION_GROUPS).includes(g))], []);
 
   const roleOptions = useMemo(() => ['All', ...roles.map((role) => role.name)], [roles]);
 
@@ -451,14 +468,20 @@ const PermissionMatrix = () => {
                 <tr>
                   <th>Role</th>
                   <th>All</th>
-                  {filteredPermissions.map((item) => (
-                    <th key={item.permission}>
-                      <div className="text-left" title={item.permission}>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">{item.group}</div>
-                        <div>{formatPermissionLabel(item.permission)}</div>
-                      </div>
-                    </th>
-                  ))}
+                  {filteredPermissions.map((item) => {
+                    // Extract action from permission string (e.g., 'masters.department.read' => 'Read')
+                    const parts = item.permission.split('.');
+                    const action = parts[parts.length - 1];
+                    const actionLabel = action.charAt(0).toUpperCase() + action.slice(1);
+                    return (
+                      <th key={item.permission}>
+                        <div className="text-left" title={item.permission}>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{item.group}</div>
+                          <div className="font-semibold">{item.group} ({actionLabel})</div>
+                        </div>
+                      </th>
+                    );
+                  })}
                   <th>Actions</th>
                 </tr>
               </thead>

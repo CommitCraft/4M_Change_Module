@@ -189,26 +189,33 @@ const MastersPage = () => {
   );
 
 
-  // Section-wise permission mapping for each tab
-
+  // Section-wise CRUD permission mapping for each tab
   const tabPermissionMap = {
     department: {
       read: 'masters.department.read',
-      manage: 'masters.department.manage',
+      create: 'masters.department.create',
+      update: 'masters.department.update',
+      delete: 'masters.department.delete',
     },
     production_line: {
       read: 'masters.productionline.read',
-      manage: 'masters.productionline.manage',
+      create: 'masters.productionline.create',
+      update: 'masters.productionline.update',
+      delete: 'masters.productionline.delete',
     },
     machine: {
       read: 'masters.machine.read',
-      manage: 'masters.machine.manage',
+      create: 'masters.machine.create',
+      update: 'masters.machine.update',
+      delete: 'masters.machine.delete',
     },
     skill: {
       read: 'masters.skill.read',
-      manage: 'masters.skill.manage',
+      create: 'masters.skill.create',
+      update: 'masters.skill.update',
+      delete: 'masters.skill.delete',
     },
-    // Add more as needed
+    // Add more as needed for other master categories
   };
 
   // Initialize activeConfig before using it
@@ -222,7 +229,9 @@ const MastersPage = () => {
   const currentPerms = tabPermissionMap[currentCategory] || {};
 
   const canRead = currentPerms.read ? hasPermission(currentPerms.read) : true;
-  const canManageMasters = currentPerms.manage ? hasPermission(currentPerms.manage) : true;
+  const canCreate = currentPerms.create ? hasPermission(currentPerms.create) : false;
+  const canUpdate = currentPerms.update ? hasPermission(currentPerms.update) : false;
+  const canDelete = currentPerms.delete ? hasPermission(currentPerms.delete) : false;
 
   const operators = useMemo(() => allMasters.filter((r) => r.category === 'operator').map((r) => r.name), [allMasters]);
   const machines = useMemo(() => allMasters.filter((r) => r.category === 'machine').map((r) => r.name), [allMasters]);
@@ -913,9 +922,15 @@ const MastersPage = () => {
                     </ul>
                   </div>
                 )}
-          {!canManageMasters && (
+          {!(canCreate && canUpdate && canDelete) && (
             <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-              You have read-only access to master data.
+              {canRead && !(canCreate || canUpdate || canDelete)
+                ? 'You have read-only access to master data.'
+                : `Your permissions: ${[
+                    canCreate ? 'Create' : null,
+                    canUpdate ? 'Update' : null,
+                    canDelete ? 'Delete' : null,
+                  ].filter(Boolean).join(', ') || 'None'}`}
             </div>
           )}
 
@@ -1129,7 +1144,7 @@ const MastersPage = () => {
                   className="btn-primary disabled:opacity-60 flex-shrink-0"
                   style={{ minWidth: '100px' }}
                   onClick={() => setAddModalOpen(true)}
-                  disabled={!canManageMasters}
+                  disabled={!canCreate}
                 >
                   Add Entry
                 </button>
@@ -1170,7 +1185,7 @@ const MastersPage = () => {
                   type="button"
                   className="btn-primary disabled:opacity-60"
                   onClick={() => bulkUpdateStatus('Active')}
-                  disabled={!canManageMasters || saving || selectedIds.length === 0}
+                  disabled={!canUpdate || saving || selectedIds.length === 0}
                 >
                   Activate Selected
                 </button>
@@ -1178,7 +1193,7 @@ const MastersPage = () => {
                   type="button"
                   className="btn-danger disabled:opacity-60"
                   onClick={() => bulkUpdateStatus('Inactive')}
-                  disabled={!canManageMasters || saving || selectedIds.length === 0}
+                  disabled={!canUpdate || saving || selectedIds.length === 0}
                 >
                   Deactivate Selected
                 </button>
@@ -1255,7 +1270,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canUpdate || saving}
                                     onClick={() => toggleMasterStatus(rows[0])}
                                   >
                                     {status === 'Active' ? 'Deactivate' : 'Activate'}
@@ -1263,7 +1278,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters}
+                                    disabled={!canUpdate}
                                     onClick={() => setEditing({
                                       ...rows[0],
                                       name: rows.map(r => r.skill).join(', '),
@@ -1276,7 +1291,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-danger disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canDelete || saving}
                                     onClick={() => removeMaster(rows[0].id)}
                                   >
                                     Delete
