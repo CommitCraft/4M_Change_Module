@@ -209,13 +209,72 @@ const MastersPage = () => {
       update: 'masters.machine.update',
       delete: 'masters.machine.delete',
     },
+    change_subtype: {
+      read: 'masters.change_subtype.read',
+      create: 'masters.change_subtype.create',
+      update: 'masters.change_subtype.update',
+      delete: 'masters.change_subtype.delete',
+    },
+    risk_level: {
+      read: 'masters.risk_level.read',
+      create: 'masters.risk_level.create',
+      update: 'masters.risk_level.update',
+      delete: 'masters.risk_level.delete',
+    },
+    operator: {
+      read: 'masters.operator.read',
+      create: 'masters.operator.create',
+      update: 'masters.operator.update',
+      delete: 'masters.operator.delete',
+    },
     skill: {
       read: 'masters.skill.read',
       create: 'masters.skill.create',
       update: 'masters.skill.update',
       delete: 'masters.skill.delete',
     },
-    // Add more as needed for other master categories
+    operator_skill_map: {
+      read: 'masters.operator_skill_map.read',
+      create: 'masters.operator_skill_map.create',
+      update: 'masters.operator_skill_map.update',
+      delete: 'masters.operator_skill_map.delete',
+    },
+    machine_skill_requirement: {
+      read: 'masters.machine_skill_requirement.read',
+      create: 'masters.machine_skill_requirement.create',
+      update: 'masters.machine_skill_requirement.update',
+      delete: 'masters.machine_skill_requirement.delete',
+    },
+    method_skill_map: {
+      read: 'masters.method_skill_map.read',
+      create: 'masters.method_skill_map.create',
+      update: 'masters.method_skill_map.update',
+      delete: 'masters.method_skill_map.delete',
+    },
+    material_skill_map: {
+      read: 'masters.material_skill_map.read',
+      create: 'masters.material_skill_map.create',
+      update: 'masters.material_skill_map.update',
+      delete: 'masters.material_skill_map.delete',
+    },
+    training_program: {
+      read: 'masters.training_program.read',
+      create: 'masters.training_program.create',
+      update: 'masters.training_program.update',
+      delete: 'masters.training_program.delete',
+    },
+    type_requirement: {
+      read: 'masters.type_requirement.read',
+      create: 'masters.type_requirement.create',
+      update: 'masters.type_requirement.update',
+      delete: 'masters.type_requirement.delete',
+    },
+    type_action_template: {
+      read: 'masters.type_action_template.read',
+      create: 'masters.type_action_template.create',
+      update: 'masters.type_action_template.update',
+      delete: 'masters.type_action_template.delete',
+    },
   };
 
   // Initialize activeConfig before using it
