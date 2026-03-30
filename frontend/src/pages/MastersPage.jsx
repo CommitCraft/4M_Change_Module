@@ -307,8 +307,10 @@ const MastersPage = () => {
   // Fetch all master data from normalized tables and merge into a single array for UI compatibility
   const fetchMasters = useCallback(async () => {
     setLoading(true);
+    // Track which sections failed (likely due to permission)
+    const failedSections = [];
     try {
-      const [departments, productionLines, machines, changeSubTypes, operators, skills, machineSkillRequirements, trainingPrograms, typeRequirements, typeActionTemplates, riskLevels, operatorSkillMapsRes] = await Promise.all([
+      const results = await Promise.allSettled([
         departmentService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
         productionLineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
         machineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
@@ -322,26 +324,51 @@ const MastersPage = () => {
         riskLevelService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
         operatorSkillMapService.getAll().then(res => res.data.data || []),
       ]);
-      setAllMasters([
-        ...departments,
-        ...productionLines,
-        ...machines,
-        ...changeSubTypes,
-        ...operators,
-        ...skills,
-        ...machineSkillRequirements,
-        ...trainingPrograms,
-        ...typeRequirements,
-        ...typeActionTemplates,
-        ...riskLevels,
-      ]);
-      setOperatorSkillMaps(operatorSkillMapsRes);
+
+      // Map of section index to category name
+      const sectionMap = [
+        'department',
+        'production_line',
+        'machine',
+        'change_subtype',
+        'operator',
+        'skill',
+        'machine_skill_requirement',
+        'training_program',
+        'type_requirement',
+        'type_action_template',
+        'risk_level',
+        'operator_skill_map',
+      ];
+
+      // Collect successful results
+      const allMastersArr = [];
+      let operatorSkillMapsArr = [];
+      results.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          if (sectionMap[idx] === 'operator_skill_map') {
+            operatorSkillMapsArr = result.value;
+          } else {
+            allMastersArr.push(...result.value);
+          }
+        } else {
+          failedSections.push(sectionMap[idx]);
+        }
+      });
+      setAllMasters(allMastersArr);
+      setOperatorSkillMaps(operatorSkillMapsArr);
+      setRestrictedSections(failedSections);
+      if (failedSections.length > 0 && failedSections.length === sectionMap.length) {
+        showError('You do not have permission to view any master data.');
+      }
     } catch (error) {
       showError('Failed to fetch masters');
     } finally {
       setLoading(false);
     }
   }, []);
+  // Track restricted sections for UI messaging
+  const [restrictedSections, setRestrictedSections] = useState([]);
 
   useEffect(() => {
     fetchMasters();
@@ -386,12 +413,14 @@ const MastersPage = () => {
   }, [allMasters]);
 
   // Permission fallback UI (moved out of useMemo)
-  if (!canRead) {
+
+  // If user has no read permission for the current tab, show access denied for that tab only
+  if (!canRead || (restrictedSections.includes(currentCategory))) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="text-center">
+      <div className="min-h-[400px] flex items-center justify-center bg-gray-50 dark:bg-gray-950 rounded-lg border border-red-200 dark:border-red-400 my-8">
+        <div className="text-center p-8">
           <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Access Denied</h2>
-          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view this section. Please contact your administrator.</p>
+          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view this 4M section. Please contact your administrator.</p>
         </div>
       </div>
     );
@@ -488,8 +517,8 @@ const MastersPage = () => {
   }, [allMasters, selectedIds]);
 
   const createMaster = async (payload) => {
-    if (!canManageMasters) {
-      showError('You do not have permission to update master data');
+    if (!canCreate) {
+      showError('You do not have permission to create master data');
       return;
     }
 
@@ -652,7 +681,7 @@ const MastersPage = () => {
   };
 
   const removeMaster = async (id) => {
-    if (!canManageMasters) {
+    if (!canDelete) {
       showError('You do not have permission to delete master data');
       return;
     }
