@@ -1345,7 +1345,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canUpdate || saving}
                                     onClick={() => toggleMasterStatus(rows[0])}
                                   >
                                     {status === 'Active' ? 'Deactivate' : 'Activate'}
@@ -1353,7 +1353,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters}
+                                    disabled={!canUpdate}
                                     onClick={() => setEditing({ ...rows[0] })}
                                   >
                                     Edit
@@ -1361,7 +1361,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-danger disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canDelete || saving}
                                     onClick={() => removeMaster(rows[0].id)}
                                   >
                                     Delete
@@ -1419,7 +1419,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canUpdate || saving}
                                     onClick={() => toggleMasterStatus(item)}
                                   >
                                     {item.status === 'Active' ? 'Deactivate' : 'Activate'}
@@ -1427,7 +1427,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-secondary disabled:opacity-60"
-                                    disabled={!canManageMasters}
+                                    disabled={!canUpdate}
                                     onClick={() => setEditing({ ...item })}
                                   >
                                     Edit
@@ -1435,7 +1435,7 @@ const MastersPage = () => {
                                   <button
                                     type="button"
                                     className="btn-danger disabled:opacity-60"
-                                    disabled={!canManageMasters || saving}
+                                    disabled={!canDelete || saving}
                                     onClick={() => removeMaster(item.id)}
                                   >
                                     Delete
