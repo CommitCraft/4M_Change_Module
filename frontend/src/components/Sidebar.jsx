@@ -20,7 +20,7 @@ const Sidebar = ({ isOpen }) => {
     // Removed Pending Reviews and Pending Approvals from sidebar
     { path: '/implementation', label: 'Implementation', icon: FaTools, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
     { path: '/monitoring', label: 'Monitoring', icon: FaChartLine, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
-    { path: '/reports', label: 'Reports', icon: FaChartBar, permission: 'changes.read' },
+    // { path: '/reports', label: 'Reports', icon: FaChartBar, permission: 'changes.read' },
     { path: '/masters', label: 'Masters', icon: FaListUl, permission: 'changes.read' },
     { path: '/guided-setup', label: '4M Guided Setup', icon: FaClipboardCheck, permission: 'changes.read' },
     { path: '/users', label: 'Users', icon: FaUsers, permission: 'users.read' },
