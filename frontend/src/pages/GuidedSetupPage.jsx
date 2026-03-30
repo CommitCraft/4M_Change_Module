@@ -140,7 +140,48 @@ const GuidedSetupPage = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [isPreviewModalOpen, setPreviewModalOpen] = useState(false);
 
-  const canManageMasters = hasPermission('changes.update');
+  // Section-wise permission mapping for each 4M type
+
+  const guidedPermissionMap = {
+    Man: {
+      read: 'guidedsetup.man.read',
+      update: 'guidedsetup.man.update',
+      manage: 'guidedsetup.man.update',
+    },
+    Machine: {
+      read: 'guidedsetup.machine.read',
+      update: 'guidedsetup.machine.update',
+      manage: 'guidedsetup.machine.update',
+    },
+    Method: {
+      read: 'guidedsetup.method.read',
+      update: 'guidedsetup.method.update',
+      manage: 'guidedsetup.method.update',
+    },
+    Material: {
+      read: 'guidedsetup.material.read',
+      update: 'guidedsetup.material.update',
+      manage: 'guidedsetup.material.update',
+    },
+  };
+
+  // Section-wise permission checks for current 4M type
+  const currentGuidedPerms = guidedPermissionMap[guidedType] || {};
+
+  const canRead = currentGuidedPerms.read ? hasPermission(currentGuidedPerms.read) : true;
+  const canManageMasters = currentGuidedPerms.manage ? hasPermission(currentGuidedPerms.manage) : true;
+
+  if (!canRead) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Access Denied</h2>
+          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view this 4M section. Please contact your administrator.</p>
+        </div>
+      </div>
+    );
+  }
+  const canUpdate = currentGuidedPerms.update ? hasPermission(currentGuidedPerms.update) : false;
   const operators = useMemo(
     () => allMasters.filter((r) => r.category === 'operator' && r.status === 'Active').map((r) => r.name),
     [allMasters]
@@ -761,7 +802,7 @@ const GuidedSetupPage = () => {
 
   const submitGuidedFlow = async () => {
     if (!canManageMasters) {
-      const message = 'You do not have permission to update master data';
+      const message = 'You do not have permission to update this 4M section';
       showError(message);
       return;
     }
@@ -947,7 +988,7 @@ const GuidedSetupPage = () => {
 
         {!canManageMasters && (
           <div className="mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-            You have read-only access. Next/Final Submit/Reset requires update permission.
+            You have read-only access. Next/Final Submit/Reset requires update permission for this 4M section.
           </div>
         )}
 

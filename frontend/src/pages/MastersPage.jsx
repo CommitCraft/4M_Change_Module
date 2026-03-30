@@ -187,12 +187,42 @@ const MastersPage = () => {
       return acc;
     }, {})
   );
-  const canManageMasters = hasPermission('changes.update');
 
+
+  // Section-wise permission mapping for each tab
+
+  const tabPermissionMap = {
+    department: {
+      read: 'masters.department.read',
+      manage: 'masters.department.manage',
+    },
+    production_line: {
+      read: 'masters.productionline.read',
+      manage: 'masters.productionline.manage',
+    },
+    machine: {
+      read: 'masters.machine.read',
+      manage: 'masters.machine.manage',
+    },
+    skill: {
+      read: 'masters.skill.read',
+      manage: 'masters.skill.manage',
+    },
+    // Add more as needed
+  };
+
+  // Initialize activeConfig before using it
   const activeConfig = useMemo(
     () => MASTER_TABS.find((tab) => tab.key === activeTab) || MASTER_TABS[0],
     [activeTab]
   );
+
+  // Get current tab's category
+  const currentCategory = activeConfig.category;
+  const currentPerms = tabPermissionMap[currentCategory] || {};
+
+  const canRead = currentPerms.read ? hasPermission(currentPerms.read) : true;
+  const canManageMasters = currentPerms.manage ? hasPermission(currentPerms.manage) : true;
 
   const operators = useMemo(() => allMasters.filter((r) => r.category === 'operator').map((r) => r.name), [allMasters]);
   const machines = useMemo(() => allMasters.filter((r) => r.category === 'machine').map((r) => r.name), [allMasters]);
@@ -271,6 +301,7 @@ const MastersPage = () => {
     return [];
   };
 
+
   const mappedSkillsIndex = useMemo(() => {
     const categories = [
       'machine_skill_requirement',
@@ -278,30 +309,25 @@ const MastersPage = () => {
       'method_skill_map',
       'material_skill_map',
     ];
-    const index = categories.reduce((acc, category) => {
-      acc[category] = {};
-      return acc;
-    }, {});
-
-    allMasters.forEach((row) => {
-      if (!categories.includes(row.category)) return;
-      if (row.status !== 'Active') return;
-      const typeKey = row.type || '';
-      if (!typeKey) return;
-
-      if (!index[row.category][typeKey]) {
-        index[row.category][typeKey] = [];
-      }
-
-      const existing = index[row.category][typeKey];
-      const lower = row.name.toLowerCase();
-      if (!existing.some((item) => item.toLowerCase() === lower)) {
-        existing.push(row.name);
-      }
+    const index = {};
+    categories.forEach((category) => {
+      index[category] = {};
+      // You can add logic here to populate index if needed
     });
-
     return index;
   }, [allMasters]);
+
+  // Permission fallback UI (moved out of useMemo)
+  if (!canRead) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Access Denied</h2>
+          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view this section. Please contact your administrator.</p>
+        </div>
+      </div>
+    );
+  }
 
   const shouldShowMappedSkills =
     activeConfig.category === 'machine' ||

@@ -13,26 +13,29 @@ const router = express.Router();
 
 router.use(authMiddleware);
 
+
 router.get(
   '/',
-  authorizePermissions('changes.read'),
+  authorizePermissions('masters.department.read'),
   query('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
   validateRequest,
   getDepartments
 );
 
+
 router.post(
   '/',
-  authorizePermissions('changes.update'),
+  authorizePermissions('masters.department.create'),
   body('name').trim().notEmpty().isLength({ max: 150 }).withMessage('Name is required (max 150 chars)'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
   validateRequest,
   createDepartment
 );
 
+
 router.put(
   '/:id',
-  authorizePermissions('changes.update'),
+  authorizePermissions('masters.department.update'),
   param('id').isInt({ min: 1 }).withMessage('Invalid id'),
   body('name').trim().notEmpty().isLength({ max: 150 }).withMessage('Name is required (max 150 chars)'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
@@ -40,9 +43,10 @@ router.put(
   updateDepartment
 );
 
+
 router.delete(
   '/:id',
-  authorizePermissions('changes.update'),
+  authorizePermissions('masters.department.delete'),
   param('id').isInt({ min: 1 }).withMessage('Invalid id'),
   validateRequest,
   deleteDepartment

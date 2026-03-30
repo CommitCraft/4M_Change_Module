@@ -9,16 +9,21 @@ import { getValidationForSchema } from '../middleware/validators.js';
 
 const router = express.Router();
 
+
+import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
+
+router.use(authMiddleware);
+
 // GET all production lines
-router.get('/', getProductionLines);
+router.get('/', authorizePermissions('masters.productionline.read'), getProductionLines);
 
 // POST create a new production line
-router.post('/', ...getValidationForSchema('productionLine'), createProductionLine);
+router.post('/', authorizePermissions('masters.productionline.create'), ...getValidationForSchema('productionLine'), createProductionLine);
 
 // PUT update a production line
-router.put('/:id', ...getValidationForSchema('productionLine'), updateProductionLine);
+router.put('/:id', authorizePermissions('masters.productionline.update'), ...getValidationForSchema('productionLine'), updateProductionLine);
 
 // DELETE a production line
-router.delete('/:id', deleteProductionLine);
+router.delete('/:id', authorizePermissions('masters.productionline.delete'), deleteProductionLine);
 
 export default router;
