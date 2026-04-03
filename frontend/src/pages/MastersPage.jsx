@@ -164,6 +164,9 @@ const TAB_HINTS = {
   machine_skill_requirement: 'Define required skills for each machine.',
   method_skill_map: 'Define required skills for each method subtype.',
   material_skill_map: 'Define required skills for each material subtype.',
+  training_program: 'Define training programs mapped to skills for faster operator upskilling.',
+  type_requirement: 'Define mandatory quality/compliance checkpoints for each 4M type.',
+  type_action_template: 'Define recommended action-plan templates for each 4M type.',
 };
 
 const MASTER_SECTION_SOURCES = [
@@ -484,19 +487,43 @@ const MastersPage = () => {
 
 
   const mappedSkillsIndex = useMemo(() => {
-    const categories = [
-      'machine_skill_requirement',
-      'operator_skill_map',
-      'method_skill_map',
-      'material_skill_map',
-    ];
-    const index = {};
-    categories.forEach((category) => {
-      index[category] = {};
-      // You can add logic here to populate index if needed
+    const index = {
+      machine_skill_requirement: {},
+      operator_skill_map: {},
+      method_skill_map: {},
+      material_skill_map: {},
+    };
+
+    const addSkill = (bucket, parentName, skillName) => {
+      const key = String(parentName || '').trim();
+      const skill = String(skillName || '').trim();
+      if (!key || !skill) return;
+      if (!bucket[key]) bucket[key] = [];
+      if (!bucket[key].includes(skill)) {
+        bucket[key].push(skill);
+      }
+    };
+
+    allMasters.forEach((row) => {
+      if (row.category === 'machine_skill_requirement') {
+        addSkill(index.machine_skill_requirement, row.type || row.machine, row.name || row.skill);
+      }
+
+      if (row.category === 'method_skill_map') {
+        addSkill(index.method_skill_map, row.type, row.name);
+      }
+
+      if (row.category === 'material_skill_map') {
+        addSkill(index.material_skill_map, row.type, row.name);
+      }
     });
+
+    operatorSkillMaps.forEach((row) => {
+      addSkill(index.operator_skill_map, row.type || row.operator, row.name || row.skill);
+    });
+
     return index;
-  }, [allMasters]);
+  }, [allMasters, operatorSkillMaps]);
 
   // Permission fallback UI (moved out of useMemo)
 
@@ -1103,6 +1130,23 @@ const MastersPage = () => {
                       </li>
                       <li>
                         <span className="font-medium">If a skill is missing from the list, add it first in <span className="underline">Skills</span> and then return here to map it.</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+                {['Type Requirements', 'Type Action Templates'].includes(activeConfig.key) && (
+                  <div className="mb-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300">
+                    <strong>Governance Masters Guide:</strong>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>
+                        <span className="font-medium">Type Requirements:</span> define mandatory checks (quality/safety/compliance) for each 4M type.
+                      </li>
+                      <li>
+                        <span className="font-medium">Type Action Templates:</span> define suggested action steps so implementation remains standardized.
+                      </li>
+                      <li>
+                        Ye data approval ke time reviewer ko clear checklist aur expected action flow deta hai.
                       </li>
                     </ul>
                   </div>
