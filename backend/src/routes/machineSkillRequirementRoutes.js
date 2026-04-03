@@ -5,20 +5,23 @@ import {
   updateMachineSkillRequirement,
   deleteMachineSkillRequirement
 } from '../controllers/machineSkillRequirementController.js';
+import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 import { getValidationForSchema } from '../middleware/validators.js';
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // GET all machine-skill requirements
-router.get('/', getMachineSkillRequirements);
+router.get('/', authorizePermissions('masters.machine_skill_requirement.read'), getMachineSkillRequirements);
 
 // POST create a new machine-skill requirement
-router.post('/', ...getValidationForSchema('machineSkillRequirement'), createMachineSkillRequirement);
+router.post('/', authorizePermissions('masters.machine_skill_requirement.create'), ...getValidationForSchema('machineSkillRequirement'), createMachineSkillRequirement);
 
 // PUT update a machine-skill requirement
-router.put('/:id', ...getValidationForSchema('machineSkillRequirement'), updateMachineSkillRequirement);
+router.put('/:id', authorizePermissions('masters.machine_skill_requirement.update'), ...getValidationForSchema('machineSkillRequirement'), updateMachineSkillRequirement);
 
 // DELETE a machine-skill requirement
-router.delete('/:id', deleteMachineSkillRequirement);
+router.delete('/:id', authorizePermissions('masters.machine_skill_requirement.delete'), deleteMachineSkillRequirement);
 
 export default router;

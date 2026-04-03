@@ -5,20 +5,23 @@ import {
   updateOperatorSkillMap,
   deleteOperatorSkillMap
 } from '../controllers/operatorSkillMapController.js';
+import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 import { getValidationForSchema } from '../middleware/validators.js';
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // GET all operator-skill mappings
-router.get('/', getOperatorSkillMaps);
+router.get('/', authorizePermissions('masters.operator_skill_map.read'), getOperatorSkillMaps);
 
 // POST create a new operator-skill mapping
-router.post('/', ...getValidationForSchema('operatorSkillMap'), createOperatorSkillMap);
+router.post('/', authorizePermissions('masters.operator_skill_map.create'), ...getValidationForSchema('operatorSkillMap'), createOperatorSkillMap);
 
 // PUT update an operator-skill mapping
-router.put('/:id', ...getValidationForSchema('operatorSkillMap'), updateOperatorSkillMap);
+router.put('/:id', authorizePermissions('masters.operator_skill_map.update'), ...getValidationForSchema('operatorSkillMap'), updateOperatorSkillMap);
 
 // DELETE an operator-skill mapping
-router.delete('/:id', deleteOperatorSkillMap);
+router.delete('/:id', authorizePermissions('masters.operator_skill_map.delete'), deleteOperatorSkillMap);
 
 export default router;

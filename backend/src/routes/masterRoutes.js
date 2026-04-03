@@ -34,11 +34,42 @@ const validateTypeByCategory = (value, { req }) => {
   return true;
 };
 
+const CATEGORY_PERMISSIONS = {
+  department: 'masters.department',
+  production_line: 'masters.productionline',
+  machine: 'masters.machine',
+  change_subtype: 'masters.change_subtype',
+  risk_level: 'masters.risk_level',
+  operator: 'masters.operator',
+  skill: 'masters.skill',
+  operator_skill_map: 'masters.operator_skill_map',
+  machine_skill_requirement: 'masters.machine_skill_requirement',
+  method_skill_map: 'masters.method_skill_map',
+  material_skill_map: 'masters.material_skill_map',
+  training_program: 'masters.training_program',
+  type_requirement: 'masters.type_requirement',
+  type_action_template: 'masters.type_action_template',
+};
+
+const getCategoryPermission = (category, action) => {
+  const moduleName = CATEGORY_PERMISSIONS[category];
+  if (!moduleName) return null;
+  return `${moduleName}.${action}`;
+};
+
 router.use(authMiddleware);
 
 router.get(
   '/',
-  authorizePermissions('changes.read'),
+  (req, res, next) => {
+    const category = req.query.category;
+    if (category) {
+      const permission = getCategoryPermission(category, 'read');
+      if (!permission) return res.status(400).json({ message: 'Invalid category' });
+      return authorizePermissions(permission)(req, res, next);
+    }
+    return authorizePermissions('changes.read')(req, res, next);
+  },
   query('category')
     .optional()
     .isIn([
@@ -66,7 +97,11 @@ router.get(
 
 router.post(
   '/',
-  authorizePermissions('changes.update'),
+  (req, res, next) => {
+    const permission = getCategoryPermission(req.body?.category, 'create');
+    if (!permission) return res.status(400).json({ message: 'Invalid category' });
+    return authorizePermissions(permission)(req, res, next);
+  },
   body('category')
     .isIn([
       'department',
@@ -94,11 +129,16 @@ router.post(
 
 router.put(
   '/:id',
-  authorizePermissions('changes.update'),
+  (req, res, next) => {
+    const permission = getCategoryPermission(req.body?.category, 'update');
+    if (!permission) return res.status(400).json({ message: 'Invalid category' });
+    return authorizePermissions(permission)(req, res, next);
+  },
   param('id').isInt({ min: 1 }).withMessage('Invalid id'),
   body('category')
     .isIn([
       'department',
+      'production_line',
       'machine',
       'change_subtype',
       'risk_level',

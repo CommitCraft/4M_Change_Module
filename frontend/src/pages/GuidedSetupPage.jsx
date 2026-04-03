@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { guidedSetupService, departmentService, productionLineService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, trainingProgramService, typeRequirementService, typeActionTemplateService } from '../services/api';
+import { guidedSetupService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, typeRequirementService } from '../services/api';
 import { showError, showSuccess, showInfo, showWarning } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,13 +37,21 @@ const DRAFT_CARRY_FORWARD_CATEGORY_MAP = {
   machine: ['machine'],
   skill: ['skill'],
   operator: ['operator'],
-  training_program: ['training_program'],
   change_subtype: ['change_subtype'],
   type_requirement: ['type_requirement'],
-  type_action_template: ['type_action_template'],
 };
 
 const MASTERS_UPDATED_EVENT = 'masters:updated';
+
+const MASTER_SECTION_SOURCES = [
+  { category: 'machine', service: machineService, readPermission: 'masters.machine.read', transform: (row) => ({ ...row, category: 'machine' }) },
+  { category: 'change_subtype', service: changeSubTypeService, readPermission: 'masters.change_subtype.read', transform: (row) => ({ ...row, category: 'change_subtype' }) },
+  { category: 'operator', service: operatorService, readPermission: 'masters.operator.read', transform: (row) => ({ ...row, category: 'operator' }) },
+  { category: 'skill', service: skillService, readPermission: 'masters.skill.read', transform: (row) => ({ ...row, category: 'skill' }) },
+  { category: 'operator_skill_map', service: operatorSkillMapService, readPermission: 'guidedsetup.man.read', transform: (row) => ({ ...row, category: 'operator_skill_map' }) },
+  { category: 'machine_skill_requirement', service: machineSkillRequirementService, readPermission: 'guidedsetup.machine.read', transform: (row) => ({ ...row, category: 'machine_skill_requirement' }) },
+  { category: 'type_requirement', service: typeRequirementService, readPermission: 'guidedsetup.method.read', transform: (row) => ({ ...row, category: 'type_requirement' }) },
+];
 
 const parseBulkNames = (rawValue) => {
   const seen = new Set();
@@ -165,22 +173,33 @@ const GuidedSetupPage = () => {
     },
   };
 
+  const visibleGuidedTypes = useMemo(
+    () =>
+      FOUR_M_TYPES.filter((type) => {
+        const flowPerms = guidedPermissionMap[type] || {};
+        const readPermission = flowPerms.read;
+
+        return readPermission ? hasPermission(readPermission) : false;
+      }),
+    [hasPermission]
+  );
+
+  const hasAnyGuidedReadAccess = visibleGuidedTypes.length > 0;
+  const selectableGuidedTypes = hasAnyGuidedReadAccess ? visibleGuidedTypes : FOUR_M_TYPES;
+  const activeGuidedType = selectableGuidedTypes.includes(guidedType) ? guidedType : selectableGuidedTypes[0] || guidedType;
+
   // Section-wise permission checks for current 4M type
-  const currentGuidedPerms = guidedPermissionMap[guidedType] || {};
+  const currentGuidedPerms = guidedPermissionMap[activeGuidedType] || {};
 
   const canRead = currentGuidedPerms.read ? hasPermission(currentGuidedPerms.read) : true;
   const canManageMasters = currentGuidedPerms.manage ? hasPermission(currentGuidedPerms.manage) : true;
 
-  if (!canRead) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Access Denied</h2>
-          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view this 4M section. Please contact your administrator.</p>
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (selectableGuidedTypes.length > 0 && guidedType !== activeGuidedType) {
+      setGuidedType(activeGuidedType);
+    }
+  }, [guidedType, activeGuidedType, selectableGuidedTypes]);
+
   const canUpdate = currentGuidedPerms.update ? hasPermission(currentGuidedPerms.update) : false;
   const operators = useMemo(
     () => allMasters.filter((r) => r.category === 'operator' && r.status === 'Active').map((r) => r.name),
@@ -194,41 +213,32 @@ const GuidedSetupPage = () => {
     () => allMasters.filter((r) => r.category === 'skill' && r.status === 'Active').map((r) => r.name),
     [allMasters]
   );
-  const guidedSteps = useMemo(() => GUIDED_FLOW_CONFIG[guidedType] || [], [guidedType]);
+  const guidedSteps = useMemo(() => GUIDED_FLOW_CONFIG[activeGuidedType] || [], [activeGuidedType]);
 
   const loadMasters = useCallback(async () => {
     try {
-      const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes] = await Promise.all([
-        departmentService.getAll(),
-        productionLineService.getAll(),
-        machineService.getAll(),
-        changeSubTypeService.getAll(),
-        operatorService.getAll(),
-        skillService.getAll(),
-        operatorSkillMapService.getAll(),
-        machineSkillRequirementService.getAll(),
-        trainingProgramService.getAll(),
-        typeRequirementService.getAll(),
-        typeActionTemplateService.getAll(),
-      ]);
-      const allMasters = [
-        ...(departmentsRes.data.data || []).map((r) => ({ ...r, category: 'department' })),
-        ...(productionLinesRes.data.data || []).map((r) => ({ ...r, category: 'production_line' })),
-        ...(machinesRes.data.data || []).map((r) => ({ ...r, category: 'machine' })),
-        ...(subtypesRes.data.data || []).map((r) => ({ ...r, category: 'change_subtype' })),
-        ...(operatorsRes.data.data || []).map((r) => ({ ...r, category: 'operator' })),
-        ...(skillsRes.data.data || []).map((r) => ({ ...r, category: 'skill' })),
-        ...(operatorSkillMapsRes.data.data || []).map((r) => ({ ...r, category: 'operator_skill_map' })),
-        ...(machineSkillRequirementsRes.data.data || []).map((r) => ({ ...r, category: 'machine_skill_requirement' })),
-        ...(trainingProgramsRes.data.data || []).map((r) => ({ ...r, category: 'training_program' })),
-        ...(typeRequirementsRes.data.data || []).map((r) => ({ ...r, category: 'type_requirement' })),
-        ...(typeActionTemplatesRes.data.data || []).map((r) => ({ ...r, category: 'type_action_template' })),
-      ];
+      const readableSources = MASTER_SECTION_SOURCES.filter((section) => {
+        return section.readPermission ? hasPermission(section.readPermission) : true;
+      });
+
+      const results = await Promise.allSettled(
+        readableSources.map((section) =>
+          section.service.getAll().then((res) => (res.data.data || []).map(section.transform))
+        )
+      );
+
+      const allMasters = [];
+      results.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          allMasters.push(...result.value);
+        }
+      });
+
       setAllMasters(allMasters);
     } catch (error) {
       showError('Failed to load master options');
     }
-  }, []);
+  }, [hasPermission]);
 
   useEffect(() => {
     loadMasters();
@@ -250,26 +260,26 @@ const GuidedSetupPage = () => {
     setNewEntryName({});
     setOpenDropdown(null);
     setPreviewModalOpen(false);
-  }, [guidedType]);
+  }, [activeGuidedType]);
 
   useEffect(() => {
     const loadGuidedProgress = async () => {
       try {
         setGuidedSyncState('syncing');
-        const response = await guidedSetupService.getProgress(guidedType);
+        const response = await guidedSetupService.getProgress(activeGuidedType);
         const data = response.data?.data;
         const completedSteps = Array.isArray(data?.completed_steps) ? data.completed_steps : [];
         const currentIndex = Number.isInteger(data?.current_step_index) ? data.current_step_index : 0;
 
         const nextCompletedMap = {};
         completedSteps.forEach((stepId) => {
-          nextCompletedMap[`${guidedType}:${stepId}`] = true;
+          nextCompletedMap[`${activeGuidedType}:${stepId}`] = true;
         });
 
         setGuidedCompletedSteps((prev) => {
           const next = { ...prev };
           guidedSteps.forEach((step) => {
-            delete next[`${guidedType}:${step.id}`];
+            delete next[`${activeGuidedType}:${step.id}`];
           });
           return { ...next, ...nextCompletedMap };
         });
@@ -303,7 +313,7 @@ const GuidedSetupPage = () => {
         });
         setGuidedLastSynced((prev) => ({
           ...prev,
-          [guidedType]: data?.updated_at || null,
+          [activeGuidedType]: data?.updated_at || null,
         }));
         setGuidedSyncState('synced');
       } catch (error) {
@@ -312,10 +322,16 @@ const GuidedSetupPage = () => {
       }
     };
 
+    if (!canRead) {
+      setGuidedSyncState('idle');
+      setGuidedCurrentStepIndex(0);
+      return;
+    }
+
     if (guidedSteps.length > 0) {
       loadGuidedProgress();
     }
-  }, [guidedType, guidedSteps]);
+  }, [activeGuidedType, guidedSteps, canRead]);
 
   const getGuidedStepForm = (step) => {
     const nameField = step.fields.find((field) => field.key === 'name');
@@ -340,12 +356,12 @@ const GuidedSetupPage = () => {
   };
 
   const getGuidedFieldSearchValue = (step, field) => {
-    const searchKey = `${guidedType}:${step.id}:${field.key}`;
+    const searchKey = `${activeGuidedType}:${step.id}:${field.key}`;
     return guidedFieldSearch[searchKey] || '';
   };
 
   const setGuidedFieldSearchValue = (step, field, value) => {
-    const searchKey = `${guidedType}:${step.id}:${field.key}`;
+    const searchKey = `${activeGuidedType}:${step.id}:${field.key}`;
     setGuidedFieldSearch((prev) => ({
       ...prev,
       [searchKey]: value,
@@ -543,7 +559,7 @@ const GuidedSetupPage = () => {
   };
 
   const resetGuidedDraftState = useCallback(
-    (type = guidedType) => {
+    (type = activeGuidedType) => {
       const stepsForType = GUIDED_FLOW_CONFIG[type] || [];
       const keysToRemove = stepsForType.map((step) => `${type}:${step.id}`);
 
@@ -584,10 +600,10 @@ const GuidedSetupPage = () => {
       setPendingLocalMasters([]);
       setOpenDropdown(null);
     },
-    [guidedType]
+    [activeGuidedType]
   );
 
-  const getGuidedStepStateKey = (step) => `${guidedType}:${step.id}`;
+  const getGuidedStepStateKey = (step) => `${activeGuidedType}:${step.id}`;
   const isStepCompleted = (step) => Boolean(guidedCompletedSteps[getGuidedStepStateKey(step)]);
 
   const prepareStepSubmission = (step) => {
@@ -719,7 +735,7 @@ const GuidedSetupPage = () => {
         ])
       );
       const nextProgressIndex = Math.min(stepIndex + 1, Math.max(guidedSteps.length - 1, 0));
-      await guidedSetupService.saveProgress(guidedType, {
+      await guidedSetupService.saveProgress(activeGuidedType, {
         completed_steps: completedStepIds,
         current_step_index: nextProgressIndex,
         draft_forms: buildDraftFormsPayload(),
@@ -728,14 +744,14 @@ const GuidedSetupPage = () => {
       setGuidedCompletedSteps((prev) => {
         const next = { ...prev };
         completedStepIds.forEach((stepId) => {
-          next[`${guidedType}:${stepId}`] = true;
+          next[`${activeGuidedType}:${stepId}`] = true;
         });
         return next;
       });
 
       setGuidedLastSynced((prev) => ({
         ...prev,
-        [guidedType]: new Date().toISOString(),
+        [activeGuidedType]: new Date().toISOString(),
       }));
       setGuidedCurrentStepIndex(nextProgressIndex);
       setGuidedSyncState('synced');
@@ -871,9 +887,9 @@ const GuidedSetupPage = () => {
 
         if (successCount > 0 || failureCount > 0) {
           nextRecentActions.push({
-            key: `${guidedType}:${row.id}:${Date.now()}:${successCount}`,
+            key: `${activeGuidedType}:${row.id}:${Date.now()}:${successCount}`,
             stepTitle: row.title,
-            type: guidedType,
+            type: activeGuidedType,
             count: successCount,
             ids: createdIds,
             names: createdNames,
@@ -889,20 +905,19 @@ const GuidedSetupPage = () => {
         return;
       }
 
-      await guidedSetupService.saveProgress(guidedType, {
+      await guidedSetupService.saveProgress(activeGuidedType, {
         completed_steps: guidedSteps.map((step) => step.id),
         current_step_index: Math.max(guidedSteps.length - 1, 0),
         draft_forms: buildDraftFormsPayload(),
       });
 
-      const refreshed = await masterService.getMasters();
-      setAllMasters(refreshed.data.data || []);
+      await loadMasters();
       window.dispatchEvent(new CustomEvent(MASTERS_UPDATED_EVENT));
 
       setRecentActions((prev) => [...nextRecentActions, ...prev].slice(0, 8));
       setGuidedLastSynced((prev) => ({
         ...prev,
-        [guidedType]: new Date().toISOString(),
+        [activeGuidedType]: new Date().toISOString(),
       }));
       setGuidedSyncState('synced');
 
@@ -913,12 +928,12 @@ const GuidedSetupPage = () => {
           ? `${totalCreated} records created, ${totalFailed} skipped/failed. Review Recent Activity.`
           : `${totalCreated} records created successfully.`;
 
-      await guidedSetupService.resetProgress(guidedType);
-      resetGuidedDraftState(guidedType);
+      await guidedSetupService.resetProgress(activeGuidedType);
+      resetGuidedDraftState(activeGuidedType);
       setPreviewModalOpen(false);
       setGuidedLastSynced((prev) => ({
         ...prev,
-        [guidedType]: new Date().toISOString(),
+        [activeGuidedType]: new Date().toISOString(),
       }));
 
       if (totalPlannedCreate === 0 && pendingLocalMasters.length === 0) {
@@ -939,27 +954,27 @@ const GuidedSetupPage = () => {
     try {
       setGuidedSaving(true);
       setGuidedSyncState('syncing');
-      await guidedSetupService.resetProgress(guidedType);
+      await guidedSetupService.resetProgress(activeGuidedType);
 
-      resetGuidedDraftState(guidedType);
+      resetGuidedDraftState(activeGuidedType);
       setPreviewModalOpen(false);
       setGuidedLastSynced((prev) => ({
         ...prev,
-        [guidedType]: new Date().toISOString(),
+        [activeGuidedType]: new Date().toISOString(),
       }));
-      showInfo(`${guidedType} draft cleared. You can start again from Step 1.`);
+      showInfo(`${activeGuidedType} draft cleared. You can start again from Step 1.`);
       setRecentActions((prev) => [
         {
-          key: `${guidedType}:reset:${Date.now()}`,
+          key: `${activeGuidedType}:reset:${Date.now()}`,
           stepTitle: 'Flow Reset',
-          type: guidedType,
+          type: activeGuidedType,
           names: [],
           createdAt: new Date().toISOString(),
         },
         ...prev,
       ].slice(0, 8));
       setGuidedSyncState('synced');
-      showSuccess(`${guidedType} guided flow reset`);
+      showSuccess(`${activeGuidedType} guided flow reset`);
     } catch (error) {
       setGuidedSyncState('error');
       showError('Failed to reset guided flow');
@@ -992,6 +1007,12 @@ const GuidedSetupPage = () => {
           </div>
         )}
 
+        {!hasAnyGuidedReadAccess && (
+          <div className="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-3 text-sm text-amber-700 dark:text-amber-300">
+            Guided setup progress is restricted for your role. You can open the page, but flow progress APIs need guided setup read permission.
+          </div>
+        )}
+
         {/* Toast notifications handled by react-hot-toast */}
         <div className="card mb-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -1001,14 +1022,14 @@ const GuidedSetupPage = () => {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                Type {TYPE_BADGE[guidedType] || '--'}
+                Type {TYPE_BADGE[activeGuidedType] || '--'}
               </span>
               <select
-                value={guidedType}
+                value={activeGuidedType}
                 onChange={(e) => setGuidedType(e.target.value)}
                 className="input-field max-w-xs dark:bg-gray-800 dark:text-gray-200"
               >
-                {FOUR_M_TYPES.map((type) => (
+                {selectableGuidedTypes.map((type) => (
                   <option key={type} value={type}>
                     {type}
                   </option>
@@ -1033,8 +1054,8 @@ const GuidedSetupPage = () => {
             <div className="mb-2 flex items-center justify-between gap-2">
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Last synced:{' '}
-                {guidedLastSynced[guidedType]
-                  ? new Date(guidedLastSynced[guidedType]).toLocaleString()
+                {guidedLastSynced[activeGuidedType]
+                  ? new Date(guidedLastSynced[activeGuidedType]).toLocaleString()
                   : 'Not synced yet'}
               </p>
               <span

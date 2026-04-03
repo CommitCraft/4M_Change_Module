@@ -5,20 +5,23 @@ import {
   updateOperator,
   deleteOperator
 } from '../controllers/operatorController.js';
+import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 import { getValidationForSchema } from '../middleware/validators.js';
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // GET all operators
-router.get('/', getOperators);
+router.get('/', authorizePermissions('masters.operator.read'), getOperators);
 
 // POST create a new operator
-router.post('/', ...getValidationForSchema('operator'), createOperator);
+router.post('/', authorizePermissions('masters.operator.create'), ...getValidationForSchema('operator'), createOperator);
 
 // PUT update an operator
-router.put('/:id', ...getValidationForSchema('operator'), updateOperator);
+router.put('/:id', authorizePermissions('masters.operator.update'), ...getValidationForSchema('operator'), updateOperator);
 
 // DELETE an operator
-router.delete('/:id', deleteOperator);
+router.delete('/:id', authorizePermissions('masters.operator.delete'), deleteOperator);
 
 export default router;
