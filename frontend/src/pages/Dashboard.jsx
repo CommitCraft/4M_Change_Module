@@ -194,7 +194,7 @@ const Dashboard = () => {
   };
 
   const statusData = {
-    labels: ['Pending', 'Approved', 'Rejected', 'Implemented'],
+    labels: ['Pending', 'Approved', 'Rejected', 'Implemented', 'Closed'],
     datasets: [
       {
         label: 'Status Count',
@@ -203,6 +203,7 @@ const Dashboard = () => {
           stats?.byStatus?.Approved || 0,
           stats?.byStatus?.Rejected || 0,
           stats?.byStatus?.Implemented || 0,
+          stats?.byStatus?.Closed || 0,
         ],
         backgroundColor: '#36A2EB',
       },
@@ -239,7 +240,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
           <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
             <h3 className="text-lg font-semibold">Total Change Requests</h3>
             <p className="text-3xl font-bold mt-2">{stats?.total || 0}</p>
@@ -259,6 +260,10 @@ const Dashboard = () => {
           <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
             <h3 className="text-lg font-semibold">Rejected Changes</h3>
             <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Rejected || 0}</p>
+          </div>
+          <div className="card bg-gradient-to-br from-slate-600 to-slate-700 text-white">
+            <h3 className="text-lg font-semibold">Closed Requests</h3>
+            <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Closed || 0}</p>
           </div>
         </div>
 

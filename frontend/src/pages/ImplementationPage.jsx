@@ -3,6 +3,7 @@ import { changeRequestService } from '../services/api';
 import { formatDate, showError, showSuccess } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
 const ImplementationPage = () => {
@@ -10,7 +11,10 @@ const ImplementationPage = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [changes, setChanges] = useState([]);
-  const [form, setForm] = useState({});
+  const [selectedChange, setSelectedChange] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({ implementation_date: '', implemented_by: '', trial_result: '', observation: '' });
   const [loadError, setLoadError] = useState('');
 
   const canImplement = ['Admin', 'SuperAdmin'].includes(user?.role);
@@ -36,39 +40,50 @@ const ImplementationPage = () => {
     fetchApproved();
   }, []);
 
-  const updateForm = (id, field, value) => {
-    setForm((prev) => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || { implementation_date: '', implemented_by: '', trial_result: '', observation: '' }),
-        [field]: value,
-      },
-    }));
+  const updateForm = (field, value) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const markImplemented = async (change) => {
+  const openImplementationForm = (change) => {
+    setSelectedChange(change);
+    setForm({
+      implementation_date: new Date().toISOString().slice(0, 10),
+      implemented_by: user?.name || '',
+      trial_result: '',
+      observation: '',
+    });
+    setModalOpen(true);
+  };
+
+  const markImplemented = async () => {
     if (!canImplement) {
       showError('Only Admin or SuperAdmin can mark requests as Implemented');
       return;
     }
 
-    const values = form[change.id] || {};
+    if (!selectedChange) return;
+
     const observation = [
-      `Implementation Date: ${values.implementation_date || '-'}`,
-      `Implemented By: ${values.implemented_by || '-'}`,
-      `Trial Result: ${values.trial_result || '-'}`,
-      `Observation: ${values.observation || '-'}`,
+      `Implementation Date: ${form.implementation_date || '-'}`,
+      `Implemented By: ${form.implemented_by || '-'}`,
+      `Trial Result: ${form.trial_result || '-'}`,
+      `Observation: ${form.observation || '-'}`,
     ].join(' | ');
 
     try {
-      await changeRequestService.updateChangeRequest(change.id, {
+      setSubmitting(true);
+      await changeRequestService.updateChangeRequest(selectedChange.id, {
         status: 'Implemented',
         impact_analysis: observation,
       });
       showSuccess('Request marked as Implemented');
+      setModalOpen(false);
+      setSelectedChange(null);
       fetchApproved();
     } catch (error) {
       showError(error.response?.data?.message || 'Failed to mark implemented');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -97,40 +112,122 @@ const ImplementationPage = () => {
         ) : changes.length === 0 ? (
           <div className="card text-center py-10 text-gray-500">No approved requests pending implementation.</div>
         ) : (
-          <div className="space-y-4">
-            {changes.map((change) => (
-              <div className="card" key={change.id}>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{change.title}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{change.department} | {change.type} | {formatDate(change.created_at)}</p>
-
-                <div className="grid md:grid-cols-2 gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Implementation Date</label>
-                    <input type="date" className="input-field dark:bg-gray-800 dark:text-gray-200" value={form[change.id]?.implementation_date || ''} onChange={(e) => updateForm(change.id, 'implementation_date', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Implemented By</label>
-                    <input type="text" className="input-field dark:bg-gray-800 dark:text-gray-200" value={form[change.id]?.implemented_by || ''} onChange={(e) => updateForm(change.id, 'implemented_by', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Trial Result</label>
-                    <input type="text" className="input-field dark:bg-gray-800 dark:text-gray-200" value={form[change.id]?.trial_result || ''} onChange={(e) => updateForm(change.id, 'trial_result', e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">Observation</label>
-                    <input type="text" className="input-field dark:bg-gray-800 dark:text-gray-200" value={form[change.id]?.observation || ''} onChange={(e) => updateForm(change.id, 'observation', e.target.value)} />
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2">
-                  <button type="button" className="btn-primary" onClick={() => markImplemented(change)}>
-                    Mark Implemented
-                  </button>
-                </div>
-              </div>
-            ))}
+          <div className="card overflow-x-auto">
+            <table className="table-custom">
+              <thead>
+                <tr>
+                  <th>Request No</th>
+                  <th>Date</th>
+                  <th>Department</th>
+                  <th>Machine</th>
+                  <th>Type</th>
+                  <th>Title</th>
+                  <th>Requested By</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {changes.map((change) => (
+                  <tr key={change.id}>
+                    <td>{change.request_no || `CR-${String(change.id).padStart(4, '0')}`}</td>
+                    <td>{formatDate(change.request_date || change.created_at)}</td>
+                    <td>{change.department || '-'}</td>
+                    <td>{change.machine || '-'}</td>
+                    <td>{change.type || '-'}</td>
+                    <td>{change.title || '-'}</td>
+                    <td>{change.creator?.name || '-'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => openImplementationForm(change)}
+                      >
+                        Implementation Form
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
+
+        <Modal
+          isOpen={modalOpen}
+          title={selectedChange ? `Implementation - ${selectedChange.title}` : 'Implementation Form'}
+          onClose={() => {
+            if (submitting) return;
+            setModalOpen(false);
+            setSelectedChange(null);
+          }}
+        >
+          {selectedChange && (
+            <form
+              className="space-y-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                markImplemented();
+              }}
+            >
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Implementation Date</label>
+                <input
+                  type="date"
+                  className="input-field w-full dark:bg-gray-800 dark:text-gray-200"
+                  value={form.implementation_date}
+                  onChange={(e) => updateForm('implementation_date', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Implemented By</label>
+                <input
+                  type="text"
+                  className="input-field w-full dark:bg-gray-800 dark:text-gray-200"
+                  value={form.implemented_by}
+                  onChange={(e) => updateForm('implemented_by', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Trial Result</label>
+                <input
+                  type="text"
+                  className="input-field w-full dark:bg-gray-800 dark:text-gray-200"
+                  value={form.trial_result}
+                  onChange={(e) => updateForm('trial_result', e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Observation</label>
+                <textarea
+                  className="input-field w-full dark:bg-gray-800 dark:text-gray-200"
+                  rows={3}
+                  value={form.observation}
+                  onChange={(e) => updateForm('observation', e.target.value)}
+                  placeholder="Enter implementation observation"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => {
+                    if (submitting) return;
+                    setModalOpen(false);
+                    setSelectedChange(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn-primary" disabled={submitting}>
+                  {submitting ? 'Saving...' : 'Mark Implemented'}
+                </button>
+              </div>
+            </form>
+          )}
+        </Modal>
       </main>
     </div>
   );
