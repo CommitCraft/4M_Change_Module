@@ -9,7 +9,7 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://192.168.1.35:5000',
+        target: 'http://192.168.1.33:5000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       }

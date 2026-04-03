@@ -166,6 +166,70 @@ const TAB_HINTS = {
   material_skill_map: 'Define required skills for each material subtype.',
 };
 
+const MASTER_SECTION_SOURCES = [
+  {
+    category: 'department',
+    service: departmentService,
+    transform: (row) => ({ ...row, category: 'department' }),
+  },
+  {
+    category: 'production_line',
+    service: productionLineService,
+    transform: (row) => ({ ...row, category: 'production_line' }),
+  },
+  {
+    category: 'machine',
+    service: machineService,
+    transform: (row) => ({ ...row, category: 'machine' }),
+  },
+  {
+    category: 'change_subtype',
+    service: changeSubTypeService,
+    transform: (row) => ({ ...row, category: 'change_subtype' }),
+  },
+  {
+    category: 'operator',
+    service: operatorService,
+    transform: (row) => ({ ...row, category: 'operator' }),
+  },
+  {
+    category: 'skill',
+    service: skillService,
+    transform: (row) => ({ ...row, category: 'skill' }),
+  },
+  {
+    category: 'machine_skill_requirement',
+    service: machineSkillRequirementService,
+    transform: (row) => ({ ...row, category: 'machine_skill_requirement' }),
+  },
+  {
+    category: 'training_program',
+    service: trainingProgramService,
+    transform: (row) => ({ ...row, category: 'training_program' }),
+  },
+  {
+    category: 'type_requirement',
+    service: typeRequirementService,
+    transform: (row) => ({ ...row, category: 'type_requirement' }),
+  },
+  {
+    category: 'type_action_template',
+    service: typeActionTemplateService,
+    transform: (row) => ({ ...row, category: 'type_action_template' }),
+  },
+  {
+    category: 'risk_level',
+    service: riskLevelService,
+    transform: (row) => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' }),
+  },
+  {
+    category: 'operator_skill_map',
+    service: operatorSkillMapService,
+    transform: null,
+    separate: true,
+  },
+];
+
 const MastersPage = () => {
   const { hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -187,7 +251,6 @@ const MastersPage = () => {
       return acc;
     }, {})
   );
-
 
   // Section-wise CRUD permission mapping for each tab
   const tabPermissionMap = {
@@ -277,6 +340,17 @@ const MastersPage = () => {
     },
   };
 
+  const visibleTabs = useMemo(
+    () =>
+      MASTER_TABS.filter((tab) => {
+        const readPermission = tabPermissionMap[tab.category]?.read;
+        return readPermission ? hasPermission(readPermission) : true;
+      }),
+    [hasPermission]
+  );
+
+  const visibleTabKeys = useMemo(() => visibleTabs.map((tab) => tab.key), [visibleTabs]);
+
   // Initialize activeConfig before using it
   const activeConfig = useMemo(
     () => MASTER_TABS.find((tab) => tab.key === activeTab) || MASTER_TABS[0],
@@ -310,55 +384,41 @@ const MastersPage = () => {
     // Track which sections failed (likely due to permission)
     const failedSections = [];
     try {
-      const results = await Promise.allSettled([
-        departmentService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'department' })) ),
-        productionLineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'production_line' })) ),
-        machineService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine' })) ),
-        changeSubTypeService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'change_subtype' })) ),
-        operatorService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'operator' })) ),
-        skillService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'skill' })) ),
-        machineSkillRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'machine_skill_requirement' })) ),
-        trainingProgramService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'training_program' })) ),
-        typeRequirementService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_requirement' })) ),
-        typeActionTemplateService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'type_action_template' })) ),
-        riskLevelService.getAll().then(res => (res.data.data || []).map(row => ({ ...row, category: 'risk_level', type: '', status: row.status || 'Active' })) ),
-        operatorSkillMapService.getAll().then(res => res.data.data || []),
-      ]);
+      const readableSections = MASTER_SECTION_SOURCES.filter((section) => {
+        const readPermission = tabPermissionMap[section.category]?.read;
+        return readPermission ? hasPermission(readPermission) : true;
+      });
 
-      // Map of section index to category name
-      const sectionMap = [
-        'department',
-        'production_line',
-        'machine',
-        'change_subtype',
-        'operator',
-        'skill',
-        'machine_skill_requirement',
-        'training_program',
-        'type_requirement',
-        'type_action_template',
-        'risk_level',
-        'operator_skill_map',
-      ];
+      const results = await Promise.allSettled(
+        readableSections.map((section) =>
+          section.service.getAll().then((res) => {
+            const rows = res.data.data || [];
+            if (section.separate) {
+              return rows;
+            }
+            return rows.map(section.transform);
+          })
+        )
+      );
 
       // Collect successful results
       const allMastersArr = [];
       let operatorSkillMapsArr = [];
       results.forEach((result, idx) => {
         if (result.status === 'fulfilled') {
-          if (sectionMap[idx] === 'operator_skill_map') {
+          if (readableSections[idx].category === 'operator_skill_map') {
             operatorSkillMapsArr = result.value;
           } else {
             allMastersArr.push(...result.value);
           }
         } else {
-          failedSections.push(sectionMap[idx]);
+          failedSections.push(readableSections[idx].category);
         }
       });
       setAllMasters(allMastersArr);
       setOperatorSkillMaps(operatorSkillMapsArr);
       setRestrictedSections(failedSections);
-      if (failedSections.length > 0 && failedSections.length === sectionMap.length) {
+      if (failedSections.length > 0 && failedSections.length === readableSections.length) {
         showError('You do not have permission to view any master data.');
       }
     } catch (error) {
@@ -366,9 +426,19 @@ const MastersPage = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [hasPermission]);
   // Track restricted sections for UI messaging
   const [restrictedSections, setRestrictedSections] = useState([]);
+
+  useEffect(() => {
+    if (visibleTabs.length === 0) {
+      return;
+    }
+
+    if (!visibleTabKeys.includes(activeTab)) {
+      setActiveTab(visibleTabs[0].key);
+    }
+  }, [activeTab, visibleTabKeys, visibleTabs]);
 
   useEffect(() => {
     fetchMasters();
@@ -413,6 +483,17 @@ const MastersPage = () => {
   }, [allMasters]);
 
   // Permission fallback UI (moved out of useMemo)
+
+  if (visibleTabs.length === 0) {
+    return (
+      <div className="min-h-[400px] flex items-center justify-center bg-gray-50 dark:bg-gray-950 rounded-lg border border-red-200 dark:border-red-400 my-8">
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Access Denied</h2>
+          <p className="text-gray-700 dark:text-gray-200">You do not have permission to view any master data. Please contact your administrator.</p>
+        </div>
+      </div>
+    );
+  }
 
   // If user has no read permission for the current tab, show access denied for that tab only
   if (!canRead || (restrictedSections.includes(currentCategory))) {
@@ -1028,7 +1109,7 @@ const MastersPage = () => {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Master Navigator</h3>
                 <div className="space-y-1">
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-2 mb-1">Core Masters</div>
-                  {MASTER_TABS.filter(tab => [
+                  {visibleTabs.filter(tab => [
                     'Departments', 'Production Lines', 'Machines', 'Operators', 'Skills', 'Risk Levels', 'Change Subtypes'
                   ].includes(tab.key)).map((tab) => (
                     <button
@@ -1046,7 +1127,7 @@ const MastersPage = () => {
                   ))}
 
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Skill & Mapping Masters</div>
-                  {MASTER_TABS.filter(tab => [
+                  {visibleTabs.filter(tab => [
                     'Operator Skills', 'Machine Skill Matrix', 'Method Skill Matrix', 'Material Skill Matrix', 'Training Programs'
                   ].includes(tab.key)).map((tab) => (
                     <button
@@ -1064,7 +1145,7 @@ const MastersPage = () => {
                   ))}
 
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Governance Masters</div>
-                  {MASTER_TABS.filter(tab => [
+                  {visibleTabs.filter(tab => [
                     'Type Requirements', 'Type Action Templates'
                   ].includes(tab.key)).map((tab) => (
                     <button
