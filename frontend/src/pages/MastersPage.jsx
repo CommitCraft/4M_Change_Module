@@ -200,12 +200,22 @@ const MASTER_SECTION_SOURCES = [
   {
     category: 'machine_skill_requirement',
     service: machineSkillRequirementService,
-    transform: (row) => ({ ...row, category: 'machine_skill_requirement' }),
+    transform: (row) => ({
+      ...row,
+      category: 'machine_skill_requirement',
+      type: row.machine || row.type || '',
+      name: row.skill || row.name || '',
+    }),
   },
   {
     category: 'training_program',
     service: trainingProgramService,
-    transform: (row) => ({ ...row, category: 'training_program' }),
+    transform: (row) => ({
+      ...row,
+      category: 'training_program',
+      type: row.skill || row.type || '',
+      name: row.name || '',
+    }),
   },
   {
     category: 'type_requirement',
@@ -365,6 +375,7 @@ const MastersPage = () => {
   const canCreate = currentPerms.create ? hasPermission(currentPerms.create) : false;
   const canUpdate = currentPerms.update ? hasPermission(currentPerms.update) : false;
   const canDelete = currentPerms.delete ? hasPermission(currentPerms.delete) : false;
+  const canManageMasters = canCreate || canUpdate || canDelete;
 
   const operators = useMemo(() => allMasters.filter((r) => r.category === 'operator').map((r) => r.name), [allMasters]);
   const machines = useMemo(() => allMasters.filter((r) => r.category === 'machine').map((r) => r.name), [allMasters]);
@@ -407,7 +418,12 @@ const MastersPage = () => {
       results.forEach((result, idx) => {
         if (result.status === 'fulfilled') {
           if (readableSections[idx].category === 'operator_skill_map') {
-            operatorSkillMapsArr = result.value;
+            operatorSkillMapsArr = (result.value || []).map((row) => ({
+              ...row,
+              category: 'operator_skill_map',
+              type: row.operator || row.type || '',
+              name: row.skill || row.name || '',
+            }));
           } else {
             allMastersArr.push(...result.value);
           }
@@ -1206,7 +1222,6 @@ const MastersPage = () => {
                     {[
                       'Operator Skills',
                       'Machine Skill Matrix',
-                      'Training Programs',
                     ].includes(activeConfig.key) ? (
                       <MultiSelectDropdown
                         options={skills}
@@ -1420,10 +1435,7 @@ const MastersPage = () => {
                               </td>
                               <td>{operator || '-'}</td>
                               <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
-                              <td className="max-w-[320px]">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
-                              </td>
-                              <td>
+                              <td className="whitespace-nowrap">
                                 <span
                                   className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
                                     status === 'Active'
@@ -1495,10 +1507,7 @@ const MastersPage = () => {
                               </td>
                               <td>{machine || '-'}</td>
                               <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
-                              <td className="max-w-[320px]">
-                                <span className="text-xs text-gray-500 dark:text-gray-400">-</span>
-                              </td>
-                              <td>
+                              <td className="whitespace-nowrap">
                                 <span
                                   className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
                                     status === 'Active'
@@ -1648,7 +1657,6 @@ const MastersPage = () => {
                     {[
                       'Operator Skills',
                       'Machine Skill Matrix',
-                      'Training Programs',
                     ].includes(activeConfig.key) ? (
                       <MultiSelectDropdown
                         options={skills}

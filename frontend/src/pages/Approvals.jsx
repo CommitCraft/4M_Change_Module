@@ -137,6 +137,8 @@ const Approvals = () => {
     }
   };
 
+  const detailsProgress = detailsChange ? getApprovalProgress(detailsChange) : null;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
@@ -277,164 +279,6 @@ const Approvals = () => {
                               : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                           }`}
                         >
-
-                        <Modal
-                          isOpen={detailsOpen}
-                          title={detailsChange?.title || 'Request Details'}
-                          sizeClassName="max-w-5xl"
-                          onClose={() => setDetailsOpen(false)}
-                        >
-                          {detailsChange && (
-                            (() => {
-                              const progress = getApprovalProgress(detailsChange);
-
-                              return (
-                            <div className="space-y-6">
-                              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                  <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">Request Overview</p>
-                                    <h3 className="mt-1 text-xl font-bold text-gray-900 dark:text-gray-100">{detailsChange.title}</h3>
-                                    <p className="mt-1 text-sm text-blue-900/80 dark:text-blue-100/80">
-                                      {detailsChange.type} | {detailsChange.department || '-'} | {detailsChange.machine || detailsChange.machine_name || '-'}
-                                    </p>
-                                  </div>
-                                  <div className="flex flex-wrap gap-2">
-                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm dark:bg-gray-900 dark:text-blue-200">
-                                      CR-{String(detailsChange.id).padStart(4, '0')}
-                                    </span>
-                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:bg-gray-900 dark:text-gray-200">
-                                      {detailsChange.status || 'Pending'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="mt-4 grid gap-3 md:grid-cols-4">
-                                  {renderField('Created By', detailsChange.creator?.name)}
-                                  {renderField('Created At', formatDate(detailsChange.created_at))}
-                                  {renderField('Request Date', formatDate(detailsChange.request_date || detailsChange.created_at))}
-                                  {renderField('Risk Level', detailsChange.risk_level)}
-                                </div>
-                              </div>
-
-                              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                {renderField('Status', detailsChange.status)}
-                                {renderField('Type', detailsChange.type)}
-                                {renderField('Department', detailsChange.department)}
-                                {renderField('Production Line', detailsChange.production_line)}
-                                {renderField('Machine', detailsChange.machine || detailsChange.machine_name)}
-                                {renderField('Current State', detailsChange.current_state || detailsChange.old_value)}
-                                {renderField('Proposed Change', detailsChange.proposed_change || detailsChange.new_value)}
-                                {renderField('Reason', detailsChange.reason)}
-                              </div>
-
-                              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                                <div className="flex items-center justify-between gap-3">
-                                  <div>
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Approval Progress</p>
-                                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                                      {progress.approvedCount} approval{progress.approvedCount === 1 ? '' : 's'} completed
-                                    </p>
-                                  </div>
-                                  <div className="text-right text-sm text-gray-600 dark:text-gray-300">
-                                    <p className="font-semibold text-gray-800 dark:text-gray-100">
-                                      Current Step: {progress.currentStep?.name || (progress.isComplete ? 'Completed' : 'Pending')}
-                                    </p>
-                                    <p>Visible steps: {progress.workflowSteps.length}</p>
-                                  </div>
-                                </div>
-                                <div className="mt-4 space-y-2">
-                                  {progress.workflowSteps.map((step, index) => {
-                                    const isCompleted = index < progress.approvedCount;
-                                    const isCurrent = index === progress.approvedCount && !progress.isComplete;
-                                    return (
-                                      <div key={step.step} className="flex items-center gap-3 text-sm">
-                                        <span
-                                          className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                                            isCompleted
-                                              ? 'bg-green-600 text-white'
-                                              : isCurrent
-                                              ? 'bg-blue-600 text-white'
-                                              : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
-                                          }`}
-                                        >
-                                          {isCompleted ? '✓' : index + 1}
-                                        </span>
-                                        <span className={`text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
-                                          {step.name}
-                                          {isCurrent ? ' (Current)' : ''}
-                                          {progress.isComplete && index === progress.workflowSteps.length - 1 ? ' (Completed)' : ''}
-                                        </span>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-
-                              <div className="grid gap-3 md:grid-cols-2">
-                                {renderField('Title', detailsChange.title)}
-                                {renderField('Description', detailsChange.description)}
-                                {renderField('Quality Impact', detailsChange.quality_impact)}
-                                {renderField('Cost Impact', detailsChange.cost_impact)}
-                                {renderField('Delivery Impact', detailsChange.delivery_impact)}
-                                {renderField('Safety Impact', detailsChange.safety_impact)}
-                                {renderField('Compliance Requirements', detailsChange.compliance_requirements)}
-                                {renderField('Action Plan Notes', detailsChange.action_plan_notes)}
-                              </div>
-
-                              {detailsChange.type === 'Man' && (
-                                <div className="space-y-3">
-                                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Man Details</h3>
-                                  <div className="grid gap-3 md:grid-cols-2">
-                                    {renderField('Current Operator', detailsChange.current_operator)}
-                                    {renderField('Proposed Operator', detailsChange.proposed_operator)}
-                                    {renderField('Required Skills', detailsChange.required_skills)}
-                                    {renderField('Skill Status', detailsChange.proposed_operator_skill_status)}
-                                    {renderYesNo('Training Required', detailsChange.training_required)}
-                                    {renderField('Training Status', detailsChange.training_status)}
-                                    {renderField('Training Notes', detailsChange.training_notes)}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="space-y-3">
-                                <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Approval History</h3>
-                                {detailsChange.approvals && detailsChange.approvals.length > 0 ? (
-                                  <div className="space-y-2">
-                                    {detailsChange.approvals.map((approval) => (
-                                      <div key={approval.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                          <p className="font-semibold text-gray-800 dark:text-gray-200">
-                                            {approval.approver?.name || 'Unknown Reviewer'}
-                                          </p>
-                                          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${approval.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'}`}>
-                                            {approval.status}
-                                          </span>
-                                        </div>
-                                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                                          {approval.approver?.Role?.name || approval.approver?.role?.name || 'Role not available'}
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                          {approval.approved_at ? formatDate(approval.approved_at) : 'Time not available'}
-                                        </p>
-                                        {approval.remarks && <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{approval.remarks}</p>}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-gray-500 dark:text-gray-400">No approval actions recorded yet.</p>
-                                )}
-                              </div>
-
-                              <div className="flex justify-end">
-                                <button type="button" className="btn-secondary" onClick={() => setDetailsOpen(false)}>
-                                  Close
-                                </button>
-                              </div>
-                            </div>
-                              );
-                            })()
-                          )}
-                        </Modal>
                           {canUserApprove(change) ? 'Review & Approve' : 'Not Your Step'}
                         </button>
                       )}
@@ -445,6 +289,168 @@ const Approvals = () => {
             )}
           </div>
         )}
+
+        <Modal
+          isOpen={detailsOpen}
+          title={detailsChange?.title || 'Request Details'}
+          sizeClassName="max-w-6xl"
+          onClose={() => setDetailsOpen(false)}
+        >
+          {detailsChange && detailsProgress && (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/40 dark:bg-blue-900/20">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-200">Request Overview</p>
+                    <h3 className="mt-1 text-xl font-bold text-gray-900 dark:text-gray-100">{detailsChange.title}</h3>
+                    <p className="mt-1 text-sm text-blue-900/80 dark:text-blue-100/80">
+                      {detailsChange.type} | {detailsChange.department || '-'} | {detailsChange.machine || detailsChange.machine_name || '-'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm dark:bg-gray-900 dark:text-blue-200">
+                      CR-{String(detailsChange.id).padStart(4, '0')}
+                    </span>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:bg-gray-900 dark:text-gray-200">
+                      {detailsChange.status || 'Pending'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Request Details</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {renderField('Created By', detailsChange.creator?.name)}
+                    {renderField('Created At', formatDate(detailsChange.created_at))}
+                    {renderField('Request Date', formatDate(detailsChange.request_date || detailsChange.created_at))}
+                    {renderField('Risk Level', detailsChange.risk_level)}
+                    {renderField('Department', detailsChange.department)}
+                    {renderField('Production Line', detailsChange.production_line)}
+                    {renderField('Machine', detailsChange.machine || detailsChange.machine_name)}
+                    {renderField('Type', detailsChange.type)}
+                    {renderField('Current State', detailsChange.current_state || detailsChange.old_value)}
+                    {renderField('Proposed Change', detailsChange.proposed_change || detailsChange.new_value)}
+                    {renderField('Reason', detailsChange.reason)}
+                    {renderField('Description', detailsChange.description)}
+                  </div>
+
+                  {detailsChange.type === 'Man' && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Man Details</h4>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {renderField('Current Operator', detailsChange.current_operator)}
+                        {renderField('Proposed Operator', detailsChange.proposed_operator)}
+                        {renderField('Required Skills', detailsChange.required_skills)}
+                        {renderField('Skill Status', detailsChange.proposed_operator_skill_status)}
+                        {renderYesNo('Training Required', detailsChange.training_required)}
+                        {renderField('Training Status', detailsChange.training_status)}
+                        {renderField('Training Notes', detailsChange.training_notes)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Review & Impact</h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {renderField('Quality Impact', detailsChange.quality_impact)}
+                    {renderField('Cost Impact', detailsChange.cost_impact)}
+                    {renderField('Delivery Impact', detailsChange.delivery_impact)}
+                    {renderField('Safety Impact', detailsChange.safety_impact)}
+                    {renderField('Compliance Requirements', detailsChange.compliance_requirements)}
+                    {renderField('Action Plan Notes', detailsChange.action_plan_notes)}
+                  </div>
+
+                  <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Approval Progress</p>
+                        <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                          {detailsProgress.approvedCount} approval{detailsProgress.approvedCount === 1 ? '' : 's'} completed
+                        </p>
+                      </div>
+                      <div className="text-right text-sm text-gray-600 dark:text-gray-300">
+                        <p className="font-semibold text-gray-800 dark:text-gray-100">
+                          Current Step: {detailsProgress.currentStep?.name || (detailsProgress.isComplete ? 'Completed' : 'Pending')}
+                        </p>
+                        <p>Visible steps: {detailsProgress.workflowSteps.length}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                      <div
+                        className="h-full rounded-full bg-blue-600 transition-all duration-300"
+                        style={{ width: `${detailsProgress.percent}%` }}
+                      />
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {detailsProgress.workflowSteps.map((step, index) => {
+                        const isCompleted = index < detailsProgress.approvedCount;
+                        const isCurrent = index === detailsProgress.approvedCount && !detailsProgress.isComplete;
+                        return (
+                          <div key={step.step} className="flex items-center gap-3 text-sm">
+                            <span
+                              className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
+                                isCompleted
+                                  ? 'bg-green-600 text-white'
+                                  : isCurrent
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'
+                              }`}
+                            >
+                              {isCompleted ? '✓' : index + 1}
+                            </span>
+                            <span className={`text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
+                              {step.name}
+                              {isCurrent ? ' (Current)' : ''}
+                              {detailsProgress.isComplete && index === detailsProgress.workflowSteps.length - 1 ? ' (Completed)' : ''}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Approval History</h4>
+                    {detailsChange.approvals && detailsChange.approvals.length > 0 ? (
+                      <div className="space-y-2">
+                        {detailsChange.approvals.map((approval) => (
+                          <div key={approval.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="font-semibold text-gray-800 dark:text-gray-200">
+                                {approval.approver?.name || 'Unknown Reviewer'}
+                              </p>
+                              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${approval.status === 'Approved' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'}`}>
+                                {approval.status}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                              {approval.approver?.Role?.name || approval.approver?.role?.name || 'Role not available'}
+                            </p>
+                            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              {approval.approved_at ? formatDate(approval.approved_at) : 'Time not available'}
+                            </p>
+                            {approval.remarks && <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{approval.remarks}</p>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500 dark:text-gray-400">No approval actions recorded yet.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button type="button" className="btn-secondary" onClick={() => setDetailsOpen(false)}>
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
 
         <Modal
           isOpen={modalOpen}
