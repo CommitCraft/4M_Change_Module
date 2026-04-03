@@ -9,6 +9,37 @@ import { FOUR_M_TYPES, getSubCategoriesByType } from '../utils/changeCategories'
 
 const IMPACT_LEVELS = ['Low', 'Medium', 'High'];
 
+const STEP_GUIDE = [
+  {
+    title: 'Basic Information',
+    description: 'Request number, department, production line, machine, and change type.',
+  },
+  {
+    title: 'Change Details',
+    description: 'Title, description, reason, and risk level.',
+  },
+  {
+    title: 'Skill/Training or Governance',
+    description: 'Man flow uses skill analysis; other flows show governance requirements.',
+  },
+  {
+    title: 'Old vs New',
+    description: 'Define the current value and proposed value.',
+  },
+  {
+    title: 'Impact Analysis',
+    description: 'Capture quality, cost, delivery, and safety impact.',
+  },
+  {
+    title: 'Attachments',
+    description: 'Upload supporting files like SOPs, photos, or reports.',
+  },
+  {
+    title: 'Preview & Submit',
+    description: 'Review every field before final submission.',
+  },
+];
+
 
 const CreateChange = () => {
   const generatedRequestNo = useMemo(() => {
@@ -339,6 +370,11 @@ const CreateChange = () => {
     'Preview & Submit',
   ];
   const [step, setStep] = useState(0);
+  const currentStepMeta = STEP_GUIDE[step] || STEP_GUIDE[0];
+  const isLastStep = step === steps.length - 1;
+  const isFirstStep = step === 0;
+  const canGoBack = !isFirstStep && !loading;
+  const primaryActionLabel = isLastStep ? (loading ? 'Submitting...' : 'Submit Request') : 'Next Section';
 
   // Section renderers
   const renderSection = () => {
@@ -552,10 +588,26 @@ const CreateChange = () => {
       case 3:
         return (
           <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Section 3 - Old vs New</h2>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Section 3 - Current State vs Proposed State</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Use this section to record the existing condition or value on the left and the expected future condition or value on the right.
+              This makes the change impact easy to review during approval.
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormInput label="Old Value" name="old_value" value={formData.old_value} onChange={handleChange} required />
-              <FormInput label="New Value" name="new_value" value={formData.new_value} onChange={handleChange} required />
+              <FormInput
+                label="Current State / Old Value"
+                name="old_value"
+                value={formData.old_value}
+                onChange={handleChange}
+                required
+              />
+              <FormInput
+                label="Proposed State / New Value"
+                name="new_value"
+                value={formData.new_value}
+                onChange={handleChange}
+                required
+              />
             </div>
           </div>
         );
@@ -652,87 +704,137 @@ const CreateChange = () => {
     }
   };
 
-  // Navigation controls
-  const isLastStep = step === steps.length - 1;
-  const isFirstStep = step === 0;
-
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40 dark:from-gray-950 dark:via-gray-950 dark:to-gray-900">
       <Navbar toggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       <Sidebar isOpen={sidebarOpen} />
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6`}>
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center gap-4">
-            Create Change Request
-            <button type="button" className="btn-secondary text-xs px-2 py-1" onClick={handleRefreshMasters} disabled={refreshing}>
-              {refreshing ? 'Refreshing...' : 'Refresh Masters'}
-            </button>
-          </h1>
-          {/* Progress indicator */}
-          <div className="flex items-center mb-6">
-            {steps.map((label, idx) => (
-              <div key={label} className="flex items-center">
-                <div className={`rounded-full w-8 h-8 flex items-center justify-center font-bold text-white ${step === idx ? 'bg-blue-600' : 'bg-gray-400'}`}>{idx + 1}</div>
-                {idx < steps.length - 1 && <div className={`h-1 w-8 ${step > idx ? 'bg-blue-600' : 'bg-gray-300'}`}></div>}
-              </div>
-            ))}
+        <div className="mb-5 rounded-2xl border border-gray-200/80 dark:border-gray-700/80 bg-white/90 dark:bg-gray-900/70 shadow-sm px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-1">Create Change Request</h1>
+              <p className="text-gray-600 dark:text-gray-400">Structured 4M-style request form with step navigation, draft saving, and preview before submit.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <button type="button" className="btn-secondary" onClick={handleRefreshMasters} disabled={refreshing}>
+                {refreshing ? 'Refreshing...' : 'Refresh Masters'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => navigate('/changes')}>
+                Back to Requests
+              </button>
+            </div>
           </div>
-          <form onSubmit={isLastStep ? handleSubmit : e => { e.preventDefault(); setStep(step + 1); }} className="card space-y-6">
-            {renderSection()}
-            <div className="flex gap-4 pt-6">
-              {!isFirstStep && (
+        </div>
+
+        <div className="grid xl:grid-cols-12 gap-4">
+          <aside className="xl:col-span-3">
+            <div className="xl:sticky xl:top-4 space-y-4">
+              <div className="card border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Request Snapshot</h2>
+                <div className="space-y-3 text-sm">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800/70 px-3 py-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Request No</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100 break-all">{formData.request_no}</p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800/70 px-3 py-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Change Type</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{formData.type}</p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800/70 px-3 py-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Risk Level</p>
+                    <p className="font-semibold text-gray-800 dark:text-gray-100">{formData.risk_level}</p>
+                  </div>
+                  <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-3 py-2 border border-blue-100 dark:border-blue-800">
+                    <p className="text-xs text-blue-700 dark:text-blue-300">Current Step</p>
+                    <p className="font-semibold text-blue-800 dark:text-blue-200">{currentStepMeta.title}</p>
+                    <p className="text-xs text-blue-700/80 dark:text-blue-300/80 mt-1">{currentStepMeta.description}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="card border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Progress</h2>
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <span className="text-gray-500 dark:text-gray-400">Step {step + 1} of {steps.length}</span>
+                  <span className="badge badge-info">{Math.round(((step + 1) / steps.length) * 100)}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden mb-4">
+                  <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+                </div>
+                <div className="space-y-2">
+                  {steps.map((label, idx) => {
+                    const isActive = idx === step;
+                    const isDone = idx < step;
+                    return (
+                      <button
+                        key={label}
+                        type="button"
+                        onClick={() => setStep(idx)}
+                        className={`w-full text-left rounded-lg border px-3 py-2 text-sm transition ${
+                          isActive
+                            ? 'border-blue-500 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-900/20 dark:text-blue-200'
+                            : isDone
+                            ? 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-900/10 dark:text-green-200'
+                            : 'border-gray-200 bg-white text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span>{idx + 1}. {label}</span>
+                          <span className="text-[10px] uppercase tracking-wide">{isActive ? 'Active' : isDone ? 'Done' : 'Pending'}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <section className="xl:col-span-9">
+            <form onSubmit={isLastStep ? handleSubmit : e => { e.preventDefault(); setStep(step + 1); }} className="card space-y-6 border border-gray-200/80 dark:border-gray-700/80 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-gray-200 dark:border-gray-700">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{currentStepMeta.title}</h2>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{currentStepMeta.description}</p>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <button type="button" onClick={saveDraft} className="btn-secondary disabled:opacity-50" disabled={loading}>
+                    Save Draft
+                  </button>
+                  <button type="button" onClick={clearDraft} className="btn-secondary disabled:opacity-50" disabled={loading}>
+                    Clear Draft
+                  </button>
+                </div>
+              </div>
+
+              {renderSection()}
+
+              <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setStep(step - 1)}
-                  className="btn-secondary flex-1"
-                  disabled={loading}
+                  className="btn-secondary flex-1 min-w-[140px]"
+                  disabled={!canGoBack}
                 >
                   Previous
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={saveDraft}
-                className="btn-secondary flex-1 disabled:opacity-50"
-                disabled={loading}
-              >
-                Save Draft
-              </button>
-              <button
-                type="button"
-                onClick={clearDraft}
-                className="btn-secondary flex-1 disabled:opacity-50"
-                disabled={loading}
-              >
-                Clear Draft
-              </button>
-              {!isLastStep && (
-                <button
-                  type="submit"
-                  className="btn-primary flex-1"
-                  disabled={loading}
-                >
-                  Next
+
+                {!isLastStep ? (
+                  <button type="submit" className="btn-primary flex-1 min-w-[160px]" disabled={loading}>
+                    Next Section
+                  </button>
+                ) : (
+                  <button type="submit" className="btn-primary flex-1 min-w-[160px]" disabled={loading}>
+                    {primaryActionLabel}
+                  </button>
+                )}
+
+                <button type="button" onClick={() => navigate('/changes')} className="btn-secondary flex-1 min-w-[140px]">
+                  Cancel
                 </button>
-              )}
-              {isLastStep && (
-                <button
-                  type="submit"
-                  className="btn-primary flex-1"
-                  disabled={loading}
-                >
-                  {loading ? 'Submitting...' : 'Submit Request'}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={() => navigate('/changes')}
-                className="btn-secondary flex-1"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
+              </div>
+            </form>
+          </section>
         </div>
       </main>
     </div>
