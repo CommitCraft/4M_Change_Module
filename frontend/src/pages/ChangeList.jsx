@@ -10,6 +10,7 @@ import Sidebar from '../components/Sidebar';
 
 const ChangeList = () => {
   const { hasPermission, user } = useAuth();
+  const currentUserId = String(user?.id || '');
   const navigate = useNavigate();
   const [changes, setChanges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +31,7 @@ const ChangeList = () => {
   const [limit] = useState(10);
   const [sortBy, setSortBy] = useState('created_at');
   const [sortOrder, setSortOrder] = useState('DESC');
+  const [loadError, setLoadError] = useState('');
 
   const APPROVAL_STEPS = [
     { step: 1, minRole: 'Manager' },
@@ -46,14 +48,14 @@ const ChangeList = () => {
   const canCurrentUserApprove = (change) => {
     if (!hasPermission('approvals.approve')) return false;
     if (!change || change.status !== 'Pending') return false;
-    if (change.created_by === user?.id) return false;
+    if (String(change.created_by || '') === currentUserId) return false;
 
     const approvedCount = change.approvals?.filter((a) => a.status === 'Approved').length || 0;
     const workflowSteps = getWorkflowSteps(change);
     const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
     const userLevel = roleHierarchy[user?.role] || 0;
     const requiredLevel = roleHierarchy[currentStep?.minRole] || 1;
-    const userApproval = change.approvals?.find((a) => a.approver_id === user?.id);
+    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
 
     return userLevel >= requiredLevel && !userApproval;
   };
@@ -65,6 +67,7 @@ const ChangeList = () => {
   const fetchChanges = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const response = await changeRequestService.getChangeRequests({
         type: filters.type,
         status: filters.status,
@@ -75,10 +78,15 @@ const ChangeList = () => {
         sortBy,
         sortOrder,
       });
-      setChanges(response.data.data.rows || []);
-      setTotal(response.data.data.total || 0);
+      const payload = response?.data?.data || {};
+      setChanges(Array.isArray(payload.rows) ? payload.rows : []);
+      setTotal(Number(payload.total || 0));
     } catch (error) {
-      showError('Failed to fetch changes');
+      const message = error?.response?.data?.message || 'Failed to fetch changes';
+      setLoadError(message);
+      setChanges([]);
+      setTotal(0);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -262,6 +270,16 @@ const ChangeList = () => {
         </div>
 
         <div className="card">
+          {!!loadError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+              <div className="flex items-center justify-between gap-3">
+                <span>{loadError}</span>
+                <button type="button" className="btn-secondary" onClick={fetchChanges}>
+                  Retry
+                </button>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="text-center py-8">Loading...</div>
           ) : (
@@ -382,7 +400,7 @@ const ChangeList = () => {
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Approval History</p>
                   <div className="space-y-2">
                     {selectedChange.approvals.map((approval, idx) => (
-                      <div key={approval.id} className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-800 rounded">
+                      <div key={approval.id || idx} className="flex items-start gap-3 p-2 bg-gray-50 dark:bg-gray-800 rounded">
                         <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold ${
                           approval.status === 'Approved' 
                             ? 'bg-green-500 text-white' 
@@ -392,7 +410,7 @@ const ChangeList = () => {
                         </div>
                         <div className="flex-1">
                           <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                            {approval.approver?.name || 'Unknown'} ({approval.approver?.role?.name || 'Role'})
+                            {approval.approver?.name || 'Unknown'} ({approval.approver?.Role?.name || approval.approver?.role?.name || 'Role'})
                           </p>
                           <p className="text-xs text-gray-600 dark:text-gray-400">
                             {approval.status === 'Approved' ? 'Approved' : 'Rejected'}

@@ -71,6 +71,7 @@ import {
   skillService,
   operatorSkillMapService,
   machineSkillRequirementService,
+  masterService,
   trainingProgramService,
   typeRequirementService,
   typeActionTemplateService,
@@ -159,7 +160,7 @@ const MASTER_TABS = [
 const TAB_HINTS = {
   machine: 'Machine list with mapped required skills.',
   operator: 'Operator list with mapped assigned skills.',
-  change_subtype: 'Manage 4M subtypes. Method/Material subtype rows also show mapped skills.',
+  change_subtype: 'Manage 4M subtypes for clearer change classification and reporting.',
   operator_skill_map: 'Map each operator to one or more skills.',
   machine_skill_requirement: 'Define required skills for each machine.',
   method_skill_map: 'Define required skills for each method subtype.',
@@ -217,6 +218,30 @@ const MASTER_SECTION_SOURCES = [
       ...row,
       category: 'training_program',
       type: row.skill || row.type || '',
+      name: row.name || '',
+    }),
+  },
+  {
+    category: 'method_skill_map',
+    service: {
+      getAll: () => masterService.getByCategory('method_skill_map'),
+    },
+    transform: (row) => ({
+      ...row,
+      category: 'method_skill_map',
+      type: row.type || '',
+      name: row.name || '',
+    }),
+  },
+  {
+    category: 'material_skill_map',
+    service: {
+      getAll: () => masterService.getByCategory('material_skill_map'),
+    },
+    transform: (row) => ({
+      ...row,
+      category: 'material_skill_map',
+      type: row.type || '',
       name: row.name || '',
     }),
   },
@@ -552,8 +577,7 @@ const MastersPage = () => {
 
   const shouldShowMappedSkills =
     activeConfig.category === 'machine' ||
-    activeConfig.category === 'operator' ||
-    activeConfig.category === 'change_subtype';
+    activeConfig.category === 'operator';
 
   const getMappedSkillsForItem = useCallback(
     (item) => {
@@ -562,12 +586,6 @@ const MastersPage = () => {
       }
       if (activeConfig.category === 'operator') {
         return mappedSkillsIndex.operator_skill_map[item.name] || [];
-      }
-      if (activeConfig.category === 'change_subtype' && item.type === 'Method') {
-        return mappedSkillsIndex.method_skill_map[item.name] || [];
-      }
-      if (activeConfig.category === 'change_subtype' && item.type === 'Material') {
-        return mappedSkillsIndex.material_skill_map[item.name] || [];
       }
       return [];
     },
@@ -681,6 +699,10 @@ const MastersPage = () => {
                 return machineSkillRequirementService.create({ machine: payload.type, skill: name, status: payload.status || 'Active' });
               case 'training_program':
                 return trainingProgramService.create({ skill: payload.type, name, status: payload.status || 'Active' });
+              case 'method_skill_map':
+                return masterService.create({ category: 'method_skill_map', type: payload.type, name, status: payload.status || 'Active' });
+              case 'material_skill_map':
+                return masterService.create({ category: 'material_skill_map', type: payload.type, name, status: payload.status || 'Active' });
               case 'type_requirement':
                 return typeRequirementService.create({ type: payload.type, name, status: payload.status || 'Active' });
               case 'type_action_template':
@@ -784,6 +806,12 @@ const MastersPage = () => {
         case 'training_program':
           await trainingProgramService.update(editing.id, { skill: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
           break;
+        case 'method_skill_map':
+          await masterService.update(editing.id, { category: 'method_skill_map', type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
+        case 'material_skill_map':
+          await masterService.update(editing.id, { category: 'material_skill_map', type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
         case 'type_requirement':
           await typeRequirementService.update(editing.id, { type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
           break;
@@ -841,6 +869,10 @@ const MastersPage = () => {
         case 'training_program':
           await trainingProgramService.delete(id);
           break;
+        case 'method_skill_map':
+        case 'material_skill_map':
+          await masterService.delete(id);
+          break;
         case 'type_requirement':
           await typeRequirementService.delete(id);
           break;
@@ -897,6 +929,12 @@ const MastersPage = () => {
           break;
         case 'training_program':
           await trainingProgramService.update(item.id, { skill: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'method_skill_map':
+          await masterService.update(item.id, { category: 'method_skill_map', type: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'material_skill_map':
+          await masterService.update(item.id, { category: 'material_skill_map', type: item.type, name: item.name, status: nextStatus });
           break;
         case 'type_requirement':
           await typeRequirementService.update(item.id, { type: item.type, name: item.name, status: nextStatus });
@@ -983,6 +1021,10 @@ const MastersPage = () => {
               return machineSkillRequirementService.update(row.id, { machine: row.type, skill: row.name, status: targetStatus });
             case 'training_program':
               return trainingProgramService.update(row.id, { skill: row.type, name: row.name, status: targetStatus });
+            case 'method_skill_map':
+              return masterService.update(row.id, { category: 'method_skill_map', type: row.type, name: row.name, status: targetStatus });
+            case 'material_skill_map':
+              return masterService.update(row.id, { category: 'material_skill_map', type: row.type, name: row.name, status: targetStatus });
             case 'type_requirement':
               return typeRequirementService.update(row.id, { type: row.type, name: row.name, status: targetStatus });
             case 'type_action_template':
@@ -1146,7 +1188,24 @@ const MastersPage = () => {
                         <span className="font-medium">Type Action Templates:</span> define suggested action steps so implementation remains standardized.
                       </li>
                       <li>
-                        Ye data approval ke time reviewer ko clear checklist aur expected action flow deta hai.
+                        This data gives reviewers a clear checklist and expected action flow during approvals.
+                      </li>
+                    </ul>
+                  </div>
+                )}
+
+                {activeConfig.key === 'Change Subtypes' && (
+                  <div className="mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-300">
+                    <strong>Change Subtypes Guide:</strong>
+                    <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>
+                        Subtypes define the exact nature of change under the selected 4M type.
+                      </li>
+                      <li>
+                        This speeds up review and approvals by making the impact area explicit.
+                      </li>
+                      <li>
+                        Method/Material subtypes make skill mapping and governance tracking more structured.
                       </li>
                     </ul>
                   </div>
@@ -1266,6 +1325,8 @@ const MastersPage = () => {
                     {[
                       'Operator Skills',
                       'Machine Skill Matrix',
+                      'Method Skill Matrix',
+                      'Material Skill Matrix',
                     ].includes(activeConfig.key) ? (
                       <MultiSelectDropdown
                         options={skills}
@@ -1593,6 +1654,70 @@ const MastersPage = () => {
                             </tr>
                           );
                         })
+                      ) : activeConfig.category === 'method_skill_map' || activeConfig.category === 'material_skill_map' ? (
+                        Object.entries(
+                          currentRows.reduce((acc, row) => {
+                            const key = row.type || '';
+                            if (!acc[key]) acc[key] = [];
+                            acc[key].push(row);
+                            return acc;
+                          }, {})
+                        ).map(([subtype, rows]) => {
+                          const status = rows[0].status;
+                          const id = rows.map((r) => r.id).join('-');
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={rows.every((r) => selectedIds.includes(r.id))}
+                                  onChange={() => rows.forEach((r) => toggleSelectRow(r.id))}
+                                />
+                              </td>
+                              <td>{subtype || '-'}</td>
+                              <td className="break-words max-w-[280px]">{rows.map((r) => r.name).join(', ')}</td>
+                              <td className="whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                    status === 'Active'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canUpdate || saving}
+                                    onClick={() => toggleMasterStatus(rows[0])}
+                                  >
+                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canUpdate}
+                                    onClick={() => setEditing({ ...rows[0], name: rows.map((r) => r.name).join(', ') })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger disabled:opacity-60"
+                                    disabled={!canDelete || saving}
+                                    onClick={() => removeMaster(rows[0].id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         currentRows.map((item) => {
                           const mappedSkills = getMappedSkillsForItem(item);
@@ -1701,6 +1826,8 @@ const MastersPage = () => {
                     {[
                       'Operator Skills',
                       'Machine Skill Matrix',
+                      'Method Skill Matrix',
+                      'Material Skill Matrix',
                     ].includes(activeConfig.key) ? (
                       <MultiSelectDropdown
                         options={skills}
@@ -1708,7 +1835,71 @@ const MastersPage = () => {
                         onChange={arr => setEditing((prev) => ({ ...prev, name: arr.join(', ') }))}
                         placeholder="Select skill(s)"
                       />
-                    ) : (
+                      ) : activeConfig.category === 'method_skill_map' || activeConfig.category === 'material_skill_map' ? (
+                        Object.entries(
+                          currentRows.reduce((acc, row) => {
+                            const key = row.type || '';
+                            if (!acc[key]) acc[key] = [];
+                            acc[key].push(row);
+                            return acc;
+                          }, {})
+                        ).map(([subtype, rows]) => {
+                          const status = rows[0].status;
+                          const id = rows.map((r) => r.id).join('-');
+                          return (
+                            <tr key={id}>
+                              <td>
+                                <input
+                                  type="checkbox"
+                                  checked={rows.every((r) => selectedIds.includes(r.id))}
+                                  onChange={() => rows.forEach((r) => toggleSelectRow(r.id))}
+                                />
+                              </td>
+                              <td>{subtype || '-'}</td>
+                              <td className="break-words max-w-[280px]">{rows.map((r) => r.name).join(', ')}</td>
+                              <td className="whitespace-nowrap">
+                                <span
+                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                    status === 'Active'
+                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                                  }`}
+                                >
+                                  {status || 'Active'}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="flex gap-2 flex-wrap">
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canUpdate || saving}
+                                    onClick={() => toggleMasterStatus(rows[0])}
+                                  >
+                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-secondary disabled:opacity-60"
+                                    disabled={!canUpdate}
+                                    onClick={() => setEditing({ ...rows[0], name: rows.map((r) => r.name).join(', ') })}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-danger disabled:opacity-60"
+                                    disabled={!canDelete || saving}
+                                    onClick={() => removeMaster(rows[0].id)}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
                       <input
                         value={editing.name}
                         onChange={(e) => setEditing((prev) => ({ ...prev, name: e.target.value }))}

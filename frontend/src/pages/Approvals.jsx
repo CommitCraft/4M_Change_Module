@@ -15,6 +15,7 @@ const APPROVAL_STEPS = [
 
 const Approvals = () => {
   const { user, hasPermission } = useAuth();
+  const currentUserId = String(user?.id || '');
   const [changes, setChanges] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedChange, setSelectedChange] = useState(null);
@@ -42,7 +43,7 @@ const Approvals = () => {
       // Filter to show only changes this user can approve
       const approvableChanges = allChanges.filter((change) => {
         // User cannot approve their own request
-        if (change.created_by === user?.id) return false;
+        if (String(change.created_by || '') === currentUserId) return false;
         
         // Get current approval step
         const approvedCount = change.approvals?.filter(a => a.status === 'Approved').length || 0;
@@ -54,7 +55,8 @@ const Approvals = () => {
         const userLevel = roleHierarchy[user?.role] || 0;
         const requiredLevel = roleHierarchy[currentStep.minRole] || 1;
         
-        return userLevel >= requiredLevel;
+        const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
+        return userLevel >= requiredLevel && !userApproval;
       });
       
       setChanges(approvableChanges);
@@ -72,7 +74,7 @@ const Approvals = () => {
   };
 
   const canUserApprove = (change) => {
-    if (change.created_by === user?.id) return false;
+    if (String(change.created_by || '') === currentUserId) return false;
     
     const currentStep = getApprovalStep(change);
     const roleHierarchy = { 'Manager': 1, 'Admin': 2, 'SuperAdmin': 3 };
@@ -80,7 +82,7 @@ const Approvals = () => {
     const requiredLevel = roleHierarchy[currentStep.minRole] || 1;
     
     // Check if user already approved this request
-    const userApproval = change.approvals?.find(a => a.approver_id === user?.id);
+    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
     
     return userLevel >= requiredLevel && !userApproval;
   };

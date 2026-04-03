@@ -13,6 +13,7 @@ ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineEleme
 
 const Dashboard = () => {
   const { hasPermission, user } = useAuth();
+  const currentUserId = String(user?.id || '');
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [recentChanges, setRecentChanges] = useState([]);
@@ -45,14 +46,14 @@ const Dashboard = () => {
   const canCurrentUserApprove = (change) => {
     if (!hasPermission('approvals.approve')) return false;
     if (!change || change.status !== 'Pending') return false;
-    if (change.created_by === user?.id) return false;
+    if (String(change.created_by || '') === currentUserId) return false;
 
     const approvedCount = change.approvals?.filter((a) => a.status === 'Approved').length || 0;
     const workflowSteps = getWorkflowSteps(change);
     const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
     const userLevel = roleHierarchy[user?.role] || 0;
     const requiredLevel = roleHierarchy[currentStep?.minRole] || 1;
-    const userApproval = change.approvals?.find((a) => a.approver_id === user?.id);
+    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
 
     return userLevel >= requiredLevel && !userApproval;
   };

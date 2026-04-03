@@ -173,4 +173,11 @@ export const guidedSetupService = {
   resetProgress: (flowType) => withConfirmation('Reset guided setup progress?', () => api.delete(`/guided-setup/${flowType}`)),
 };
 
+export const masterService = {
+  getByCategory: (category, filters = {}) => api.get('/masters', { params: { category, ...filters } }),
+  create: (payload) => withConfirmation('Create master entry?', () => api.post('/masters', payload)),
+  update: (id, payload) => withConfirmation('Update master entry?', () => api.put(`/masters/${id}`, payload)),
+  delete: (id) => withConfirmation('Delete master entry?', () => api.delete(`/masters/${id}`)),
+};
+
 export default api;

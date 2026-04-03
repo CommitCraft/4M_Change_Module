@@ -11,16 +11,22 @@ const ImplementationPage = () => {
   const [loading, setLoading] = useState(true);
   const [changes, setChanges] = useState([]);
   const [form, setForm] = useState({});
+  const [loadError, setLoadError] = useState('');
 
   const canImplement = ['Admin', 'SuperAdmin'].includes(user?.role);
 
   const fetchApproved = async () => {
     try {
       setLoading(true);
+      setLoadError('');
       const response = await changeRequestService.getChangeRequests({ status: 'Approved', page: 1, limit: 50 });
-      setChanges(response.data.data.rows || []);
+      const payload = response?.data?.data || {};
+      setChanges(Array.isArray(payload.rows) ? payload.rows : []);
     } catch (error) {
-      showError('Failed to fetch approved changes');
+      const message = error?.response?.data?.message || 'Failed to fetch approved changes';
+      setLoadError(message);
+      setChanges([]);
+      showError(message);
     } finally {
       setLoading(false);
     }
@@ -72,6 +78,17 @@ const ImplementationPage = () => {
       <Sidebar isOpen={sidebarOpen} />
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6`}>
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">Implementation Page</h1>
+
+        {!!loadError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">
+            <div className="flex items-center justify-between gap-3">
+              <span>{loadError}</span>
+              <button type="button" className="btn-secondary" onClick={fetchApproved}>
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-10">Loading...</div>
