@@ -1,22 +1,11 @@
 import mysql from 'mysql2/promise';
-import { DataTypes } from 'sequelize';
 import sequelize, { connectDatabase } from './database.js';
 import models from '../models/index.js';
-const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData } = models;
 import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
 
+const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData } = models;
+
 const ALL_ROLES = ['SuperAdmin', 'Admin', 'Manager', 'User'];
-const REQUIRED_TABLES = [
-  'roles',
-  'role_permissions',
-  'users',
-  'change_requests',
-  'approvals',
-  'audit_logs',
-  'attachments',
-  'master_data',
-  'guided_setup_progress',
-];
 
 const DEFAULT_MASTER_DATA = [
   { category: 'department', name: 'Production' },
@@ -72,7 +61,6 @@ const DEFAULT_MASTER_DATA = [
 ];
 
 const validateDbName = (dbName) => {
-  // Prevent SQL injection in identifier context.
   if (!/^[a-zA-Z0-9_]+$/.test(dbName)) {
     throw new Error('Invalid DB_NAME. Use only letters, numbers, and underscore.');
   }
@@ -123,14 +111,14 @@ export const seedCoreData = async () => {
   });
 
   if (!existingSuperAdmin) {
-    // Assign SuperAdmin to the first department if available
     let departmentId = null;
     try {
       const [firstDept] = await sequelize.query('SELECT id FROM departments ORDER BY id ASC LIMIT 1', { type: sequelize.QueryTypes.SELECT });
       if (firstDept && firstDept.id) departmentId = firstDept.id;
-    } catch (e) {
-      // If departments table does not exist or is empty, leave departmentId null
+    } catch (error) {
+      // If departments table does not exist or is empty, leave departmentId null.
     }
+
     await User.create({
       name: 'System SuperAdmin',
       email: superAdminEmail,
@@ -156,7 +144,6 @@ export const seedCoreData = async () => {
   }
 };
 
-// Auto-create all tables as per Sequelize models
 export const ensureTablesFromConfig = async () => {
   await sequelize.sync({ alter: false });
 };

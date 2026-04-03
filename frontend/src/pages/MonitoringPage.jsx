@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { changeRequestService } from '../services/api';
+import { changeRequestService, monitoringPeriodService } from '../services/api';
 import { formatDate, showError, showSuccess } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -34,6 +34,7 @@ const MonitoringPage = () => {
   const [form, setForm] = useState({});
   const [savingId, setSavingId] = useState(null);
   const [selectedChangeId, setSelectedChangeId] = useState(null);
+  const [monitoringDefaults, setMonitoringDefaults] = useState([]);
 
   // Memoized department-wise count for chart
   const byDepartment = useMemo(() => {
@@ -46,6 +47,27 @@ const MonitoringPage = () => {
   }, [changes]);
 
   const canCloseOrExtend = ['Admin', 'SuperAdmin'].includes(user?.role);
+
+  const getDefaultMonitoringPeriod = (changeType) => {
+    const normalizedType = String(changeType || '').toLowerCase();
+    const activeDefaults = monitoringDefaults.filter((item) => item.status === 'Active');
+
+    const exactMatch = activeDefaults.find((item) => String(item.type || '').toLowerCase() === normalizedType);
+    if (exactMatch?.name) return exactMatch.name;
+
+    const fallback = activeDefaults.find((item) => ['all', 'default', 'general'].includes(String(item.type || '').toLowerCase()));
+    return fallback?.name || '';
+  };
+
+  const fetchMonitoringDefaults = async () => {
+    try {
+      const response = await monitoringPeriodService.getAll({ status: 'Active' });
+      const rows = response?.data?.data || [];
+      setMonitoringDefaults(Array.isArray(rows) ? rows : []);
+    } catch (error) {
+      setMonitoringDefaults([]);
+    }
+  };
 
   const fetchImplemented = async (params = {}) => {
     try {
@@ -67,8 +89,9 @@ const MonitoringPage = () => {
       setForm((prev) => {
         const next = { ...prev };
         rows.forEach((change) => {
+          const defaultPeriod = getDefaultMonitoringPeriod(change.type);
           next[change.id] = {
-            monitoring_period: prev[change.id]?.monitoring_period || change.monitoring_period || '',
+            monitoring_period: prev[change.id]?.monitoring_period || change.monitoring_period || defaultPeriod,
             quality_result: prev[change.id]?.quality_result || change.quality_result || '',
             defect_rate: prev[change.id]?.defect_rate || change.defect_rate || '',
             comments: prev[change.id]?.comments || change.monitoring_comments || '',
@@ -83,6 +106,10 @@ const MonitoringPage = () => {
     }
   };
 
+  useEffect(() => {
+    fetchMonitoringDefaults();
+  }, []);
+
   // Debounced search
   useEffect(() => {
     if (searchRef.current) clearTimeout(searchRef.current);
@@ -91,7 +118,7 @@ const MonitoringPage = () => {
     }, 400);
     return () => clearTimeout(searchRef.current);
     // eslint-disable-next-line
-  }, [page, limit, search, department, type, sortBy, sortOrder]);
+  }, [page, limit, search, department, type, sortBy, sortOrder, monitoringDefaults]);
     // Reset filters
     const resetFilters = () => {
       setSearch('');

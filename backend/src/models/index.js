@@ -19,6 +19,7 @@ import Approval from './Approval.js';
 import AuditLog from './AuditLog.js';
 import Attachment from './Attachment.js';
 import MasterData from './MasterData.js';
+import MonitoringPeriod from './MonitoringPeriod.js';
 import GuidedSetupProgress from './GuidedSetupProgress.js';
 import Department from './Department.js';
 
@@ -58,6 +59,7 @@ export default {
   AuditLog,
   Attachment,
   MasterData,
+  MonitoringPeriod,
   GuidedSetupProgress,
   ProductionLine,
   Machine,

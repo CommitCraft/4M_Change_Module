@@ -72,6 +72,7 @@ import {
   operatorSkillMapService,
   machineSkillRequirementService,
   masterService,
+  monitoringPeriodService,
   trainingProgramService,
   typeRequirementService,
   typeActionTemplateService,
@@ -142,6 +143,13 @@ const MASTER_TABS = [
     placeholder: 'Training program name',
   },
   {
+    key: 'Monitoring Periods',
+    category: 'monitoring_period',
+    needsType: true,
+    typeLabel: '4M Type',
+    placeholder: 'e.g. 30 days',
+  },
+  {
     key: 'Type Requirements',
     category: 'type_requirement',
     needsType: true,
@@ -166,6 +174,7 @@ const TAB_HINTS = {
   method_skill_map: 'Define required skills for each method subtype.',
   material_skill_map: 'Define required skills for each material subtype.',
   training_program: 'Define training programs mapped to skills for faster operator upskilling.',
+  monitoring_period: 'Define default monitoring period by 4M type for auto-fill in Monitoring page.',
   type_requirement: 'Define mandatory quality/compliance checkpoints for each 4M type.',
   type_action_template: 'Define recommended action-plan templates for each 4M type.',
 };
@@ -218,6 +227,16 @@ const MASTER_SECTION_SOURCES = [
       ...row,
       category: 'training_program',
       type: row.skill || row.type || '',
+      name: row.name || '',
+    }),
+  },
+  {
+    category: 'monitoring_period',
+    service: monitoringPeriodService,
+    transform: (row) => ({
+      ...row,
+      category: 'monitoring_period',
+      type: row.type || '',
       name: row.name || '',
     }),
   },
@@ -357,6 +376,12 @@ const MastersPage = () => {
       create: 'masters.material_skill_map.create',
       update: 'masters.material_skill_map.update',
       delete: 'masters.material_skill_map.delete',
+    },
+    monitoring_period: {
+      read: 'masters.type_requirement.read',
+      create: 'masters.type_requirement.create',
+      update: 'masters.type_requirement.update',
+      delete: 'masters.type_requirement.delete',
     },
     training_program: {
       read: 'masters.training_program.read',
@@ -505,6 +530,7 @@ const MastersPage = () => {
     if (tabConfig.category === 'method_skill_map') return methodSubtypes;
     if (tabConfig.category === 'material_skill_map') return materialSubtypes;
     if (tabConfig.category === 'training_program') return skills;
+    if (tabConfig.category === 'monitoring_period') return FOUR_M_TYPES;
     if (tabConfig.category === 'type_requirement') return FOUR_M_TYPES;
     if (tabConfig.category === 'type_action_template') return FOUR_M_TYPES;
     return [];
@@ -699,6 +725,8 @@ const MastersPage = () => {
                 return machineSkillRequirementService.create({ machine: payload.type, skill: name, status: payload.status || 'Active' });
               case 'training_program':
                 return trainingProgramService.create({ skill: payload.type, name, status: payload.status || 'Active' });
+              case 'monitoring_period':
+                return monitoringPeriodService.create({ type: payload.type, name, status: payload.status || 'Active' });
               case 'method_skill_map':
                 return masterService.create({ category: 'method_skill_map', type: payload.type, name, status: payload.status || 'Active' });
               case 'material_skill_map':
@@ -806,6 +834,9 @@ const MastersPage = () => {
         case 'training_program':
           await trainingProgramService.update(editing.id, { skill: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
           break;
+        case 'monitoring_period':
+          await monitoringPeriodService.update(editing.id, { type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
+          break;
         case 'method_skill_map':
           await masterService.update(editing.id, { category: 'method_skill_map', type: editing.type, name: editing.name.trim(), status: editing.status || 'Active' });
           break;
@@ -869,6 +900,9 @@ const MastersPage = () => {
         case 'training_program':
           await trainingProgramService.delete(id);
           break;
+        case 'monitoring_period':
+          await monitoringPeriodService.delete(id);
+          break;
         case 'method_skill_map':
         case 'material_skill_map':
           await masterService.delete(id);
@@ -929,6 +963,9 @@ const MastersPage = () => {
           break;
         case 'training_program':
           await trainingProgramService.update(item.id, { skill: item.type, name: item.name, status: nextStatus });
+          break;
+        case 'monitoring_period':
+          await monitoringPeriodService.update(item.id, { type: item.type, name: item.name, status: nextStatus });
           break;
         case 'method_skill_map':
           await masterService.update(item.id, { category: 'method_skill_map', type: item.type, name: item.name, status: nextStatus });
@@ -1021,6 +1058,8 @@ const MastersPage = () => {
               return machineSkillRequirementService.update(row.id, { machine: row.type, skill: row.name, status: targetStatus });
             case 'training_program':
               return trainingProgramService.update(row.id, { skill: row.type, name: row.name, status: targetStatus });
+            case 'monitoring_period':
+              return monitoringPeriodService.update(row.id, { type: row.type, name: row.name, status: targetStatus });
             case 'method_skill_map':
               return masterService.update(row.id, { category: 'method_skill_map', type: row.type, name: row.name, status: targetStatus });
             case 'material_skill_map':
@@ -1177,10 +1216,13 @@ const MastersPage = () => {
                   </div>
                 )}
 
-                {['Type Requirements', 'Type Action Templates'].includes(activeConfig.key) && (
+                {['Monitoring Periods', 'Type Requirements', 'Type Action Templates'].includes(activeConfig.key) && (
                   <div className="mb-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300">
                     <strong>Governance Masters Guide:</strong>
                     <ul className="list-disc pl-5 mt-1 space-y-1">
+                      <li>
+                        <span className="font-medium">Monitoring Periods:</span> define default monitoring duration by 4M type (auto-filled in Monitoring page).
+                      </li>
                       <li>
                         <span className="font-medium">Type Requirements:</span> define mandatory checks (quality/safety/compliance) for each 4M type.
                       </li>
@@ -1265,7 +1307,7 @@ const MastersPage = () => {
 
                   <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Governance Masters</div>
                   {visibleTabs.filter(tab => [
-                    'Type Requirements', 'Type Action Templates'
+                    'Monitoring Periods', 'Type Requirements', 'Type Action Templates'
                   ].includes(tab.key)).map((tab) => (
                     <button
                       key={tab.key}

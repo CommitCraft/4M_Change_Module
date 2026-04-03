@@ -154,6 +154,12 @@ export const trainingProgramService = {
   update: (id, payload) => withConfirmation('Update training program?', () => api.put(`/training-programs/${id}`, payload)),
   delete: (id) => withConfirmation('Delete training program?', () => api.delete(`/training-programs/${id}`)),
 };
+export const monitoringPeriodService = {
+  getAll: (filters = {}) => api.get('/monitoring-periods', { params: filters }),
+  create: (payload) => withConfirmation('Create monitoring period?', () => api.post('/monitoring-periods', payload)),
+  update: (id, payload) => withConfirmation('Update monitoring period?', () => api.put(`/monitoring-periods/${id}`, payload)),
+  delete: (id) => withConfirmation('Delete monitoring period?', () => api.delete(`/monitoring-periods/${id}`)),
+};
 export const typeRequirementService = {
   getAll: () => api.get('/type-requirements'),
   create: (payload) => withConfirmation('Create type requirement?', () => api.post('/type-requirements', payload)),
