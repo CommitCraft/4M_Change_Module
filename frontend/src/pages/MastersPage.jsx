@@ -78,6 +78,8 @@ import {
   typeActionTemplateService,
 } from '../services/api';
 import Modal from '../components/Modal';
+import MasterNavigator from '../components/masters/MasterNavigator';
+import MastersDataTable from '../components/masters/MasterDataTable';
 import { showError, showSuccess } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 
@@ -1265,72 +1267,12 @@ const MastersPage = () => {
           )}
 
           <div className="grid lg:grid-cols-12 gap-4">
-            <aside className="lg:col-span-3">
-              <div className="lg:sticky lg:top-4 border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Master Navigator</h3>
-                <div className="space-y-1">
-                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-2 mb-1">Core Masters</div>
-                  {visibleTabs.filter(tab => [
-                    'Departments', 'Production Lines', 'Machines', 'Operators', 'Skills', 'Risk Levels', 'Change Subtypes'
-                  ].includes(tab.key)).map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm ${
-                        activeTab === tab.key
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
-                      }`}
-                      onClick={() => setActiveTab(tab.key)}
-                    >
-                      {tab.key}
-                    </button>
-                  ))}
-
-                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Skill & Mapping Masters</div>
-                  {visibleTabs.filter(tab => [
-                    'Operator Skills', 'Machine Skill Matrix', 'Method Skill Matrix', 'Material Skill Matrix', 'Training Programs'
-                  ].includes(tab.key)).map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm pl-6 ${
-                        activeTab === tab.key
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
-                      }`}
-                      onClick={() => setActiveTab(tab.key)}
-                    >
-                      {tab.key}
-                    </button>
-                  ))}
-
-                  <div className="text-xs font-bold text-gray-500 dark:text-gray-400 mt-4 mb-1">Governance Masters</div>
-                  {visibleTabs.filter(tab => [
-                    'Monitoring Periods', 'Type Requirements', 'Type Action Templates'
-                  ].includes(tab.key)).map((tab) => (
-                    <button
-                      key={tab.key}
-                      type="button"
-                      className={`w-full text-left px-3 py-2 rounded-lg border text-sm pl-6 ${
-                        activeTab === tab.key
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-200'
-                      }`}
-                      onClick={() => setActiveTab(tab.key)}
-                    >
-                      {tab.key}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400">
-                  <p>Total: {categorySummary.total}</p>
-                  <p>Active: {categorySummary.active}</p>
-                  <p>Inactive: {categorySummary.inactive}</p>
-                </div>
-              </div>
-            </aside>
+            <MasterNavigator
+              visibleTabs={visibleTabs}
+              activeTab={activeTab}
+              onSelectTab={setActiveTab}
+              categorySummary={categorySummary}
+            />
 
             <section className="lg:col-span-9">
               <div className="mb-4">
@@ -1538,306 +1480,23 @@ const MastersPage = () => {
               ) : currentRows.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">No entries found</div>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="table-custom">
-                    <thead>
-                      <tr>
-                        <th>
-                          <input
-                            type="checkbox"
-                            checked={allVisibleSelected}
-                            onChange={toggleSelectAllVisible}
-                            disabled={currentRows.length === 0}
-                          />
-                        </th>
-                        {activeConfig.needsType && <th>{activeConfig.typeLabel || 'Type'}</th>}
-                        <th>Name</th>
-                        {shouldShowMappedSkills && <th>Mapped Skills</th>}
-                        <th>Status</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {/* For Skill & Mapping Masters, group by (type, category) and join names */}
-                      {activeConfig.category === 'operator_skill_map' ? (
-                        // Group operatorSkillMaps by operator, then join skills
-                        Object.entries(
-                          currentRows.reduce((acc, row) => {
-                            const key = row.operator || '';
-                            if (!acc[key]) acc[key] = [];
-                            acc[key].push(row);
-                            return acc;
-                          }, {})
-                        ).map(([operator, rows]) => {
-                          const status = rows[0].status;
-                          const id = rows.map(r => r.id).join('-');
-                          return (
-                            <tr key={id}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={rows.every(r => selectedIds.includes(r.id))}
-                                  onChange={() => rows.forEach(r => toggleSelectRow(r.id))}
-                                />
-                              </td>
-                              <td>{operator || '-'}</td>
-                              <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
-                              <td className="whitespace-nowrap">
-                                <span
-                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                    status === 'Active'
-                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                  }`}
-                                >
-                                  {status || 'Active'}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate || saving}
-                                    onClick={() => toggleMasterStatus(rows[0])}
-                                  >
-                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate}
-                                    onClick={() => setEditing({
-                                      ...rows[0],
-                                      name: rows.map(r => r.skill).join(', '),
-                                      // For operator_skill_map: type = operator, for machine_skill_requirement: type = machine
-                                      type: rows[0].operator || rows[0].machine || rows[0].type || ''
-                                    })}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-danger disabled:opacity-60"
-                                    disabled={!canDelete || saving}
-                                    onClick={() => removeMaster(rows[0].id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : activeConfig.category === 'machine_skill_requirement' ? (
-                        // Group machineSkillRequirements by machine, then join skills (show all regardless of typeFilter)
-                        Object.entries(
-                          allMasters
-                            .filter(row => row.category === 'machine_skill_requirement')
-                            .reduce((acc, row) => {
-                              const key = row.type || row.machine || '';
-                              if (!acc[key]) acc[key] = [];
-                              acc[key].push(row);
-                              return acc;
-                            }, {})
-                        ).map(([machine, rows]) => {
-                          const status = rows[0].status;
-                          const id = rows.map(r => r.id).join('-');
-                          return (
-                            <tr key={id}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={rows.every(r => selectedIds.includes(r.id))}
-                                  onChange={() => rows.forEach(r => toggleSelectRow(r.id))}
-                                />
-                              </td>
-                              <td>{machine || '-'}</td>
-                              <td className="break-words max-w-[280px]">{rows.map(r => r.skill).join(', ')}</td>
-                              <td className="whitespace-nowrap">
-                                <span
-                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                    status === 'Active'
-                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                  }`}
-                                >
-                                  {status || 'Active'}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate || saving}
-                                    onClick={() => toggleMasterStatus(rows[0])}
-                                  >
-                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate}
-                                    onClick={() => setEditing({ ...rows[0] })}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-danger disabled:opacity-60"
-                                    disabled={!canDelete || saving}
-                                    onClick={() => removeMaster(rows[0].id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : activeConfig.category === 'method_skill_map' || activeConfig.category === 'material_skill_map' ? (
-                        Object.entries(
-                          currentRows.reduce((acc, row) => {
-                            const key = row.type || '';
-                            if (!acc[key]) acc[key] = [];
-                            acc[key].push(row);
-                            return acc;
-                          }, {})
-                        ).map(([subtype, rows]) => {
-                          const status = rows[0].status;
-                          const id = rows.map((r) => r.id).join('-');
-                          return (
-                            <tr key={id}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={rows.every((r) => selectedIds.includes(r.id))}
-                                  onChange={() => rows.forEach((r) => toggleSelectRow(r.id))}
-                                />
-                              </td>
-                              <td>{subtype || '-'}</td>
-                              <td className="break-words max-w-[280px]">{rows.map((r) => r.name).join(', ')}</td>
-                              <td className="whitespace-nowrap">
-                                <span
-                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                    status === 'Active'
-                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                  }`}
-                                >
-                                  {status || 'Active'}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate || saving}
-                                    onClick={() => toggleMasterStatus(rows[0])}
-                                  >
-                                    {status === 'Active' ? 'Deactivate' : 'Activate'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate}
-                                    onClick={() => setEditing({ ...rows[0], name: rows.map((r) => r.name).join(', ') })}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-danger disabled:opacity-60"
-                                    disabled={!canDelete || saving}
-                                    onClick={() => removeMaster(rows[0].id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      ) : (
-                        currentRows.map((item) => {
-                          const mappedSkills = getMappedSkillsForItem(item);
-                          return (
-                            <tr key={item.id}>
-                              <td>
-                                <input
-                                  type="checkbox"
-                                  checked={selectedIds.includes(item.id)}
-                                  onChange={() => toggleSelectRow(item.id)}
-                                />
-                              </td>
-                              {activeConfig.needsType && <td>{item.type || '-'}</td>}
-                              <td className="break-words max-w-[280px]">{item.name}</td>
-                              {shouldShowMappedSkills && (
-                                <td className="max-w-[320px]">
-                                  {mappedSkills.length === 0 ? (
-                                    <span className="text-xs text-gray-500 dark:text-gray-400">No skill mapped</span>
-                                  ) : (
-                                    <div className="flex flex-wrap gap-1">
-                                      {mappedSkills.map((skill) => (
-                                        <span
-                                          key={`${item.id}-${skill}`}
-                                          className="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300"
-                                        >
-                                          {skill}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  )}
-                                </td>
-                              )}
-                              <td>
-                                <span
-                                  className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
-                                    item.status === 'Active'
-                                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
-                                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
-                                  }`}
-                                >
-                                  {item.status || 'Active'}
-                                </span>
-                              </td>
-                              <td>
-                                <div className="flex gap-2 flex-wrap">
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate || saving}
-                                    onClick={() => toggleMasterStatus(item)}
-                                  >
-                                    {item.status === 'Active' ? 'Deactivate' : 'Activate'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-secondary disabled:opacity-60"
-                                    disabled={!canUpdate}
-                                    onClick={() => setEditing({ ...item })}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-danger disabled:opacity-60"
-                                    disabled={!canDelete || saving}
-                                    onClick={() => removeMaster(item.id)}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <MastersDataTable
+                  activeConfig={activeConfig}
+                  currentRows={currentRows}
+                  allMasters={allMasters}
+                  selectedIds={selectedIds}
+                  allVisibleSelected={allVisibleSelected}
+                  shouldShowMappedSkills={shouldShowMappedSkills}
+                  canUpdate={canUpdate}
+                  canDelete={canDelete}
+                  saving={saving}
+                  toggleSelectRow={toggleSelectRow}
+                  toggleSelectAllVisible={toggleSelectAllVisible}
+                  toggleMasterStatus={toggleMasterStatus}
+                  removeMaster={removeMaster}
+                  setEditing={setEditing}
+                  getMappedSkillsForItem={getMappedSkillsForItem}
+                />
               )}
 
               <Modal isOpen={!!editing} title={`Edit Entry - ${activeConfig.key}`} onClose={() => setEditing(null)}>
