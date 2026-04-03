@@ -1,24 +1,33 @@
 import { Op } from 'sequelize';
 import models from '../models/index.js';
-const { Role, User } = models;
+const { Role, User, Department } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 export const getUsers = async (req, res) => {
   try {
     const users = await User.findAll({
-      include: [{ model: Role, attributes: ['name'] }],
+      include: [
+        { model: Role, attributes: ['name'] },
+        { model: Department, attributes: ['id', 'name'] },
+      ],
       order: [['created_at', 'DESC']],
     });
+
+    const visibleUsers = req.user.role === 'SuperAdmin'
+      ? users
+      : users.filter((entry) => entry.department_id === req.user.department_id);
 
     sendResponse(
       res,
       200,
       'Users fetched successfully',
-      users.map((u) => ({
+      visibleUsers.map((u) => ({
         id: u.id,
         name: u.name,
         email: u.email,
         role: u.Role.name,
+        department_id: u.department_id || null,
+        department: u.Department?.name || null,
         created_at: u.created_at,
       }))
     );
@@ -29,7 +38,7 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, department_id } = req.body;
 
     if (req.user.role !== 'SuperAdmin' && ['SuperAdmin', 'Admin'].includes(role)) {
       return sendError(res, 403, 'Only SuperAdmin can create Admin or SuperAdmin accounts');
@@ -39,6 +48,21 @@ export const createUser = async (req, res) => {
 
     if (!roleRecord) return sendError(res, 400, 'Invalid role');
 
+    const normalizedDepartmentId = department_id ? Number(department_id) : null;
+    if (normalizedDepartmentId) {
+      const department = await Department.findByPk(normalizedDepartmentId);
+      if (!department) return sendError(res, 400, 'Invalid department');
+    }
+
+    if (req.user.role !== 'SuperAdmin') {
+      if (!req.user.department_id) {
+        return sendError(res, 403, 'Your account is not assigned to a department');
+      }
+      if (normalizedDepartmentId && normalizedDepartmentId !== req.user.department_id) {
+        return sendError(res, 403, 'You can only create users in your own department');
+      }
+    }
+
     const existing = await User.scope('withPassword').findOne({ where: { email } });
     if (existing) return sendError(res, 409, 'Email already exists');
 
@@ -47,6 +71,7 @@ export const createUser = async (req, res) => {
       email,
       password,
       role_id: roleRecord.id,
+      department_id: req.user.role === 'SuperAdmin' ? normalizedDepartmentId : req.user.department_id,
     });
 
     sendResponse(res, 201, 'User created successfully', {
@@ -54,6 +79,7 @@ export const createUser = async (req, res) => {
       name: user.name,
       email: user.email,
       role,
+      department_id: user.department_id || null,
     });
   } catch (error) {
     sendError(res, 500, 'Failed to create user', error.message);
@@ -63,12 +89,12 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, department_id } = req.body;
 
     // If user is updating their own profile, allow name, email, password update, but not role
     if (Number(id) === req.user.id && req.user.role !== 'SuperAdmin') {
-      if (role) {
-        return sendError(res, 403, 'You are not allowed to change your role');
+      if (role || typeof department_id !== 'undefined') {
+        return sendError(res, 403, 'You are not allowed to change your role or department');
       }
       // Only allow name, email, password update for self
     } else if (Number(id) !== req.user.id && req.user.role !== 'SuperAdmin') {
@@ -103,6 +129,24 @@ export const updateUser = async (req, res) => {
       const roleRecord = await Role.findOne({ where: { name: role } });
       if (!roleRecord) return sendError(res, 400, 'Invalid role');
       user.role_id = roleRecord.id;
+    }
+
+    if (typeof department_id !== 'undefined') {
+      if (req.user.role !== 'SuperAdmin' && Number(id) !== req.user.id) {
+        return sendError(res, 403, 'Only SuperAdmin can change department for other users');
+      }
+
+      const normalizedDepartmentId = department_id ? Number(department_id) : null;
+      if (normalizedDepartmentId) {
+        const department = await Department.findByPk(normalizedDepartmentId);
+        if (!department) return sendError(res, 400, 'Invalid department');
+      }
+
+      if (req.user.role !== 'SuperAdmin' && normalizedDepartmentId && normalizedDepartmentId !== req.user.department_id) {
+        return sendError(res, 403, 'You can only assign your own department');
+      }
+
+      user.department_id = req.user.role === 'SuperAdmin' ? normalizedDepartmentId : req.user.department_id;
     }
 
     if (name) user.name = name;

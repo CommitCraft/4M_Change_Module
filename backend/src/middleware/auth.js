@@ -1,7 +1,7 @@
 import { verifyToken } from '../utils/jwt.js';
 import { sendError } from '../utils/response.js';
 import models from '../models/index.js';
-const { User, Role, RolePermission } = models;
+const { User, Role, RolePermission, Department } = models;
 
 export const authMiddleware = async (req, res, next) => {
   try {
@@ -14,8 +14,11 @@ export const authMiddleware = async (req, res, next) => {
 
     const decoded = verifyToken(token);
     const user = await User.findByPk(decoded.id, {
-      include: [{ model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] }],
-      attributes: ['id', 'name', 'email'],
+      include: [
+        { model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] },
+        { model: Department, attributes: ['id', 'name'] },
+      ],
+      attributes: ['id', 'name', 'email', 'department_id'],
     });
 
     if (!user) return sendError(res, 401, 'Invalid token');
@@ -25,6 +28,8 @@ export const authMiddleware = async (req, res, next) => {
       name: user.name,
       email: user.email,
       role: user.Role.name,
+      department_id: user.department_id || null,
+      department: user.Department?.name || null,
       permissions: user.Role?.RolePermission?.permissions || [],
     };
     next();

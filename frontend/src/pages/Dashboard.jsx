@@ -218,6 +218,11 @@ const Dashboard = () => {
           <div>
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">4M Dashboard</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Entry page for change request monitoring and actions.</p>
+            {user?.role !== 'SuperAdmin' && user?.department && (
+              <p className="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                Department scope: {user.department}
+              </p>
+            )}
           </div>
           <div className="flex gap-3">
             {hasPermission('changes.create') && (

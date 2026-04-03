@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Modal from '../components/Modal';
-import { roleService, userService } from '../services/api';
+import { departmentService, roleService, userService } from '../services/api';
 import { showError, showSuccess, formatDate } from '../utils/helpers';
 import { useAuth } from '../context/AuthContext';
 import { PERMISSION_GROUPS } from '../utils/permissions';
@@ -12,6 +12,7 @@ const INITIAL_FORM = {
   email: '',
   password: '',
   role: '',
+  department_id: '',
 };
 
 const Users = () => {
@@ -22,6 +23,8 @@ const Users = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
   const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [departmentFilter, setDepartmentFilter] = useState('All');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreateRoleOpen, setIsCreateRoleOpen] = useState(false);
   const [creatingRole, setCreatingRole] = useState(false);
@@ -36,11 +39,17 @@ const Users = () => {
       ? roles
       : roles.filter((roleName) => !['SuperAdmin', 'Admin'].includes(roleName));
 
+  const visibleDepartments =
+    currentUser?.role === 'SuperAdmin'
+      ? departments
+      : departments.filter((department) => String(department.id) === String(currentUser?.department_id || ''));
+
   const fetchUsers = async () => {
     try {
       setLoading(true);
       const response = await userService.getUsers();
-      setUsers(response.data.data || []);
+      const rows = response.data.data || [];
+      setUsers(departmentFilter === 'All' ? rows : rows.filter((row) => String(row.department_id || '') === String(departmentFilter)));
     } catch (error) {
       showError(error?.response?.data?.message || 'Failed to fetch users');
     } finally {
@@ -50,6 +59,20 @@ const Users = () => {
 
   useEffect(() => {
     fetchUsers();
+  }, [departmentFilter]);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await departmentService.getAll();
+        const rows = response.data.data || [];
+        setDepartments(rows);
+      } catch (error) {
+        showError(error?.response?.data?.message || 'Failed to fetch departments');
+      }
+    };
+
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
@@ -65,7 +88,11 @@ const Users = () => {
               ? roleNames[0]
               : roleNames.find((name) => !['SuperAdmin', 'Admin'].includes(name)) || '';
 
-          setForm((prev) => ({ ...prev, role: prev.role || defaultRole }));
+          setForm((prev) => ({
+            ...prev,
+            role: prev.role || defaultRole,
+            department_id: prev.department_id || String(currentUser?.department_id || ''),
+          }));
         }
       } catch (error) {
         showError(error?.response?.data?.message || 'Failed to fetch roles');
@@ -135,7 +162,10 @@ const Users = () => {
     e.preventDefault();
     try {
       setSubmitting(true);
-      await userService.createUser(form);
+      await userService.createUser({
+        ...form,
+        department_id: form.department_id ? Number(form.department_id) : null,
+      });
       setForm(INITIAL_FORM);
       setIsCreateOpen(false);
       showSuccess('User created successfully');
@@ -164,6 +194,7 @@ const Users = () => {
       email: user.email,
       password: '',
       role: user.role,
+      department_id: user.department_id ? String(user.department_id) : '',
     });
     setIsEditOpen(true);
   };
@@ -177,6 +208,7 @@ const Users = () => {
       name: editForm.name,
       email: editForm.email,
       role: editForm.role,
+      department_id: editForm.department_id ? Number(editForm.department_id) : null,
     };
 
     if (editForm.password.trim()) {
@@ -205,13 +237,27 @@ const Users = () => {
 
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6 space-y-6`}>
         <section className="card">
-          <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">User Management</h1>
-            {hasPermission('users.create') && (
-              <button className="btn-primary" onClick={() => setIsCreateOpen(true)}>
-                Create User
-              </button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="input-field w-48 dark:bg-gray-800 dark:text-gray-100"
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+              >
+                <option value="All">All Departments</option>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.id}>
+                    {department.name}
+                  </option>
+                ))}
+              </select>
+              {hasPermission('users.create') && (
+                <button className="btn-primary" onClick={() => setIsCreateOpen(true)}>
+                  Create User
+                </button>
+              )}
+            </div>
           </div>
           {hasPermission('users.create') ? (
             <div className="text-gray-600 dark:text-gray-300">Click Create User to open the form.</div>
@@ -229,6 +275,7 @@ const Users = () => {
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
+                  <th>Department</th>
                   <th>Role</th>
                   <th>Created</th>
                   <th>Actions</th>
@@ -239,6 +286,7 @@ const Users = () => {
                   <tr key={user.id}>
                     <td>{user.name}</td>
                     <td>{user.email}</td>
+                    <td>{user.department || '-'}</td>
                     <td>{user.role}</td>
                     <td>{formatDate(user.created_at)}</td>
                     <td>
@@ -272,36 +320,47 @@ const Users = () => {
         }}
       >
         <form className="space-y-3" onSubmit={handleCreate}>
-          <input
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="Name"
-            value={form.name}
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            required
-          />
-          <input
-            type="email"
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="Email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-          <input
-            type="password"
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="Password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            minLength={8}
-            required
-          />
-          <select
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            value={form.role}
-            onChange={(e) => setForm({ ...form, role: e.target.value })}
-            required
-          >
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+            <input
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="Name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <input
+              type="email"
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="Email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
+            <input
+              type="password"
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="Password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              minLength={8}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+            <select
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value })}
+              required
+            >
             {roleOptions.length === 0 ? (
               <option value="">No role available</option>
             ) : (
@@ -311,7 +370,26 @@ const Users = () => {
                 </option>
               ))
             )}
-          </select>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+            <select
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              value={form.department_id}
+              onChange={(e) => setForm({ ...form, department_id: e.target.value })}
+              required
+              disabled={currentUser?.role !== 'SuperAdmin'}
+            >
+              <option value="">Select Department</option>
+              {visibleDepartments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {hasPermission('roles.create') && (
             <button
@@ -351,41 +429,71 @@ const Users = () => {
         }}
       >
         <form className="space-y-3" onSubmit={handleUpdate}>
-          <input
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="Name"
-            value={editForm.name}
-            onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-            required
-          />
-          <input
-            type="email"
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="Email"
-            value={editForm.email}
-            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-            required
-          />
-          <input
-            type="password"
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            placeholder="New Password (optional)"
-            value={editForm.password}
-            onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
-            minLength={8}
-          />
-          <select
-            className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
-            value={editForm.role}
-            onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-            required
-          >
-            {roleOptions.map((role) => (
-              <option key={role} value={role}>
-                {role}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+            <input
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="Name"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
+            <input
+              type="email"
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="Email"
+              value={editForm.email}
+              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">New Password</label>
+            <input
+              type="password"
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              placeholder="New Password (optional)"
+              value={editForm.password}
+              onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+              minLength={8}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Role</label>
+            <select
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              value={editForm.role}
+              onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+              required
+            >
+              {roleOptions.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+            <select
+              className="input-field w-full dark:bg-gray-800 dark:text-gray-100"
+              value={editForm.department_id}
+              onChange={(e) => setEditForm({ ...editForm, department_id: e.target.value })}
+              required
+              disabled={currentUser?.role !== 'SuperAdmin'}
+            >
+              <option value="">Select Department</option>
+              {visibleDepartments.map((department) => (
+                <option key={department.id} value={department.id}>
+                  {department.name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="flex justify-end gap-2 pt-2">
             <button

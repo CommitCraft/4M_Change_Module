@@ -196,6 +196,10 @@ export const getChangeRequests = async (req, res) => {
       ];
     }
 
+    if (req.user.role !== 'SuperAdmin' && req.user.department) {
+      where.department = req.user.department;
+    }
+
     if (req.user.role === 'User') {
       where.created_by = req.user.id;
     }
@@ -341,7 +345,16 @@ export const deleteChangeRequest = async (req, res) => {
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const where = req.user.role === 'User' ? { created_by: req.user.id } : {};
+    const where = {};
+
+    if (req.user.role !== 'SuperAdmin' && req.user.department) {
+      where.department = req.user.department;
+    }
+
+    if (req.user.role === 'User') {
+      where.created_by = req.user.id;
+    }
+
     const requests = await ChangeRequest.findAll({
       where,
       attributes: ['id', 'type', 'status', 'created_at', 'title', 'department', 'machine'],

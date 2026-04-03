@@ -5,10 +5,12 @@ import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, T
 import { Pie, Bar } from 'react-chartjs-2';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../context/AuthContext';
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const ReportsPage = () => {
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -138,7 +140,14 @@ const ReportsPage = () => {
       <Sidebar isOpen={sidebarOpen} />
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6`}>
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">Reports Page</h1>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">Reports Page</h1>
+            {user?.role !== 'SuperAdmin' && user?.department && (
+              <p className="mt-2 inline-flex rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
+                Department scope: {user.department}
+              </p>
+            )}
+          </div>
           <div className="flex gap-2">
             <button type="button" className="btn-secondary" onClick={exportCSV}>Export Excel</button>
             <button type="button" className="btn-primary" onClick={exportPDF}>Export PDF</button>

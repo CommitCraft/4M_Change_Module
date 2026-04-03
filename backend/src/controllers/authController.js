@@ -1,5 +1,5 @@
 import models from '../models/index.js';
-const { User, Role, RolePermission } = models;
+const { User, Role, RolePermission, Department } = models;
 import { generateToken } from '../utils/jwt.js';
 import { sendResponse, sendError } from '../utils/response.js';
 
@@ -9,7 +9,10 @@ export const login = async (req, res) => {
 
     const user = await User.scope('withPassword').findOne({
       where: { email },
-      include: [{ model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] }],
+      include: [
+        { model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] },
+        { model: Department, attributes: ['id', 'name'] },
+      ],
     });
 
     if (!user || !(await user.comparePassword(password))) {
@@ -24,6 +27,8 @@ export const login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.Role.name,
+        department_id: user.department_id || null,
+        department: user.Department?.name || null,
         permissions: user.Role?.RolePermission?.permissions || [],
       },
       token,
@@ -36,7 +41,10 @@ export const login = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
-      include: [{ model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] }],
+      include: [
+        { model: Role, include: [{ model: RolePermission, attributes: ['permissions'] }] },
+        { model: Department, attributes: ['id', 'name'] },
+      ],
     });
 
     if (!user) {
@@ -49,6 +57,8 @@ export const getProfile = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.Role.name,
+        department_id: user.department_id || null,
+        department: user.Department?.name || null,
         permissions: user.Role?.RolePermission?.permissions || [],
       },
     });

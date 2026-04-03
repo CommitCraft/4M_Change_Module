@@ -112,6 +112,7 @@ export const createUserValidation = [
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').trim().notEmpty().withMessage('Role is required'),
+  body('department_id').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Invalid department'),
 ];
 
 export const createRoleValidation = [
@@ -143,6 +144,7 @@ export const updateUserValidation = [
   body('email').optional().isEmail().withMessage('Invalid email'),
   body('password').optional().isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('role').optional().trim().notEmpty().withMessage('Role cannot be empty'),
+  body('department_id').optional({ nullable: true }).isInt({ min: 1 }).withMessage('Invalid department'),
 ];
 
 // For /users/me (self update)
