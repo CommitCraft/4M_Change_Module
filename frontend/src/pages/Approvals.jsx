@@ -6,12 +6,13 @@ import { formatDate } from '../utils/helpers';
 import Modal from '../components/Modal';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-
-const APPROVAL_STEPS = [
-  { step: 1, name: 'Supervisor/Manager Review', minRole: 'Manager' },
-  { step: 2, name: 'Manager/Admin Review', minRole: 'Admin' },
-  { step: 3, name: 'Admin/SuperAdmin Review', minRole: 'SuperAdmin' },
-];
+import {
+  getWorkflowSteps as getWorkflowStepsHelper,
+  getApprovalStep as getApprovalStepHelper,
+  canUserApprove as canUserApproveHelper,
+  getApprovalProgress as getApprovalProgressHelper,
+  ROLE_HIERARCHY,
+} from '../utils/approvalWorkflow';
 
 const Approvals = () => {
   const { user, hasPermission } = useAuth();
@@ -27,16 +28,18 @@ const Approvals = () => {
 
   useEffect(() => {
     fetchPendingChanges();
-  }, []);
+  }, [user?.id, user?.role]);
 
-  const getWorkflowSteps = (change) => {
-    const requesterRole = change.creator?.Role?.name;
-    return requesterRole === 'SuperAdmin' ? APPROVAL_STEPS.slice(0, 2) : APPROVAL_STEPS;
-  };
+  const getWorkflowSteps = (change) => getWorkflowStepsHelper(change);
 
   const fetchPendingChanges = async () => {
     try {
       setLoading(true);
+      if (!user?.id) {
+        setChanges([]);
+        return;
+      }
+
       const response = await changeRequestService.getChangeRequests({ status: 'Pending' });
       const allChanges = response.data.data.rows || [];
       
@@ -49,11 +52,11 @@ const Approvals = () => {
         const approvedCount = change.approvals?.filter(a => a.status === 'Approved').length || 0;
         const workflowSteps = getWorkflowSteps(change);
         const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
+        if (!currentStep) return false;
         
         // Check if user can approve at this step (role hierarchy)
-        const roleHierarchy = { 'Manager': 1, 'Admin': 2, 'SuperAdmin': 3 };
-        const userLevel = roleHierarchy[user?.role] || 0;
-        const requiredLevel = roleHierarchy[currentStep.minRole] || 1;
+        const userLevel = ROLE_HIERARCHY[user?.role] || 0;
+        const requiredLevel = ROLE_HIERARCHY[currentStep.minRole] || 1;
         
         const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
         return userLevel >= requiredLevel && !userApproval;
@@ -67,25 +70,9 @@ const Approvals = () => {
     }
   };
 
-  const getApprovalStep = (change) => {
-    const approvedCount = change.approvals?.filter(a => a.status === 'Approved').length || 0;
-    const workflowSteps = getWorkflowSteps(change);
-    return workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
-  };
+  const getApprovalStep = (change) => getApprovalStepHelper(change);
 
-  const canUserApprove = (change) => {
-    if (String(change.created_by || '') === currentUserId) return false;
-    
-    const currentStep = getApprovalStep(change);
-    const roleHierarchy = { 'Manager': 1, 'Admin': 2, 'SuperAdmin': 3 };
-    const userLevel = roleHierarchy[user?.role] || 0;
-    const requiredLevel = roleHierarchy[currentStep.minRole] || 1;
-    
-    // Check if user already approved this request
-    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
-    
-    return userLevel >= requiredLevel && !userApproval;
-  };
+  const canUserApprove = (change) => canUserApproveHelper(change, user, currentUserId);
 
   const handleApprove = (change) => {
     if (!canUserApprove(change)) {
@@ -110,20 +97,7 @@ const Approvals = () => {
 
   const renderYesNo = (label, value) => renderField(label, typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value);
 
-  const getApprovalProgress = (change) => {
-    const workflowSteps = getWorkflowSteps(change);
-    const approvedCount = change.approvals?.filter((approval) => approval.status === 'Approved').length || 0;
-    const currentIndex = workflowSteps.length === 0 ? -1 : Math.min(approvedCount, workflowSteps.length - 1);
-    const currentStep = currentIndex >= 0 ? workflowSteps[currentIndex] : null;
-
-    return {
-      workflowSteps,
-      approvedCount,
-      currentStep,
-      isComplete: workflowSteps.length > 0 && approvedCount >= workflowSteps.length,
-      percent: workflowSteps.length > 0 ? Math.min((approvedCount / workflowSteps.length) * 100, 100) : 0,
-    };
-  };
+  const getApprovalProgress = (change) => getApprovalProgressHelper(change);
 
   const submitApproval = async () => {
     if (!selectedChange) return;

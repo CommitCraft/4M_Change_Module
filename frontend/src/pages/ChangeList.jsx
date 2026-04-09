@@ -7,6 +7,10 @@ import { formatDate } from '../utils/helpers';
 import Modal from '../components/Modal';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import {
+  getWorkflowSteps as getWorkflowStepsHelper,
+  canUserApprove as canUserApproveHelper,
+} from '../utils/approvalWorkflow';
 
 const ChangeList = () => {
   const { hasPermission, user } = useAuth();
@@ -33,31 +37,10 @@ const ChangeList = () => {
   const [sortOrder, setSortOrder] = useState('DESC');
   const [loadError, setLoadError] = useState('');
 
-  const APPROVAL_STEPS = [
-    { step: 1, minRole: 'Manager' },
-    { step: 2, minRole: 'Admin' },
-    { step: 3, minRole: 'SuperAdmin' },
-  ];
-  const roleHierarchy = { Manager: 1, Admin: 2, SuperAdmin: 3 };
-
-  const getWorkflowSteps = (change) => {
-    const requesterRole = change?.creator?.Role?.name;
-    return requesterRole === 'SuperAdmin' ? APPROVAL_STEPS.slice(0, 2) : APPROVAL_STEPS;
-  };
-
   const canCurrentUserApprove = (change) => {
     if (!hasPermission('approvals.approve')) return false;
     if (!change || change.status !== 'Pending') return false;
-    if (String(change.created_by || '') === currentUserId) return false;
-
-    const approvedCount = change.approvals?.filter((a) => a.status === 'Approved').length || 0;
-    const workflowSteps = getWorkflowSteps(change);
-    const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
-    const userLevel = roleHierarchy[user?.role] || 0;
-    const requiredLevel = roleHierarchy[currentStep?.minRole] || 1;
-    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
-
-    return userLevel >= requiredLevel && !userApproval;
+    return canUserApproveHelper(change, user, currentUserId);
   };
 
   useEffect(() => {

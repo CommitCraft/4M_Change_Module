@@ -4,12 +4,11 @@ import { formatDate, showError, showSuccess } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
-
-const APPROVAL_STEPS = [
-  { step: 1, minRole: 'Manager' },
-  { step: 2, minRole: 'Admin' },
-  { step: 3, minRole: 'SuperAdmin' },
-];
+import {
+  getWorkflowSteps as getWorkflowStepsHelper,
+  canUserApprove as canUserApproveHelper,
+  ROLE_HIERARCHY,
+} from '../utils/approvalWorkflow';
 
 const ReviewPage = () => {
   const { user, hasPermission } = useAuth();
@@ -19,26 +18,10 @@ const ReviewPage = () => {
   const [changes, setChanges] = useState([]);
   const [form, setForm] = useState({});
 
-  const roleHierarchy = { Manager: 1, Admin: 2, SuperAdmin: 3 };
-
-  const getWorkflowSteps = (change) => {
-    const requesterRole = change?.creator?.Role?.name;
-    return requesterRole === 'SuperAdmin' ? APPROVAL_STEPS.slice(0, 2) : APPROVAL_STEPS;
-  };
-
   const canCurrentUserReview = (change) => {
     if (!hasPermission('approvals.approve')) return false;
     if (!change || change.status !== 'Pending') return false;
-    if (String(change.created_by || '') === currentUserId) return false;
-
-    const approvedCount = change.approvals?.filter((a) => a.status === 'Approved').length || 0;
-    const workflowSteps = getWorkflowSteps(change);
-    const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
-    const userLevel = roleHierarchy[user?.role] || 0;
-    const requiredLevel = roleHierarchy[currentStep?.minRole] || 1;
-    const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
-
-    return userLevel >= requiredLevel && !userApproval;
+    return canUserApproveHelper(change, user, currentUserId);
   };
 
   const fetchPending = async () => {
