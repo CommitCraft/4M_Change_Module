@@ -4,11 +4,12 @@ import { changeRequestService, fileService } from '../services/api';
 import { formatDate, showError } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { getAssignedRoleLabel } from '../utils/approvalWorkflow';
 
 const timelineSteps = [
   { key: 'created', label: 'Request Created' },
-  { key: 'review', label: 'Supervisor Review' },
-  { key: 'approval', label: 'Quality Approval' },
+  { key: 'review', label: 'Supervisor Review (Manager)' },
+  { key: 'approval', label: 'Quality Approval (Admin/SuperAdmin)' },
   { key: 'implementation', label: 'Implementation' },
   { key: 'monitoring', label: 'Monitoring' },
   { key: 'closed', label: 'Closed' },
@@ -73,7 +74,9 @@ const RequestDetail = () => {
       : request.status === 'Approved'
       ? 'implementation'
       : request.status === 'Rejected'
-      ? 'review'
+      ? approvedCount >= 1
+        ? 'approval'
+        : 'review'
       : approvedCount === 0
       ? 'review'
       : 'approval';
@@ -187,6 +190,7 @@ const RequestDetail = () => {
 
           <div className="card">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Section 6 - Approval Timeline</h2>
+            <p className="mb-3 text-sm text-blue-700 dark:text-blue-300">Assigned To Role: {getAssignedRoleLabel(request)}</p>
             <div className="space-y-2 text-sm">
               {timelineSteps.map((step, index) => {
                 const isCompleted = completedStages[step.key];

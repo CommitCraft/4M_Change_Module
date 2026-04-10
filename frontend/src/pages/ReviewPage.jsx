@@ -5,9 +5,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import {
-  getWorkflowSteps as getWorkflowStepsHelper,
   canUserApprove as canUserApproveHelper,
-  ROLE_HIERARCHY,
 } from '../utils/approvalWorkflow';
 
 const ReviewPage = () => {

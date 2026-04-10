@@ -8,7 +8,6 @@ import Modal from '../components/Modal';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import {
-  getWorkflowSteps as getWorkflowStepsHelper,
   canUserApprove as canUserApproveHelper,
 } from '../utils/approvalWorkflow';
 

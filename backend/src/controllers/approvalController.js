@@ -3,9 +3,8 @@ const { sequelize, Approval, AuditLog, ChangeRequest, User, Role } = models;
 import { sendError, sendResponse } from '../utils/response.js';
 
 const APPROVAL_STEPS = [
-  { step: 1, name: 'Supervisor/Manager Review', minRole: 'Manager', allowedRoles: ['Manager', 'Admin', 'SuperAdmin'] },
-  { step: 2, name: 'Manager/Admin Review', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
-  { step: 3, name: 'Admin/SuperAdmin Review', minRole: 'SuperAdmin', allowedRoles: ['SuperAdmin'] },
+  { step: 1, name: 'Supervisor Review', minRole: 'Manager', allowedRoles: ['Manager'] },
+  { step: 2, name: 'Quality Approval', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
 ];
 
 export const approveRequest = async (req, res) => {
@@ -16,13 +15,7 @@ export const approveRequest = async (req, res) => {
       const request = await ChangeRequest.findByPk(request_id, { transaction });
       if (!request) throw new Error('Change request not found');
 
-      const requester = await User.findByPk(request.created_by, {
-        include: [{ model: Role, attributes: ['name'] }],
-        transaction,
-      });
-      const requesterRole = requester?.Role?.name;
-      // If requester is SuperAdmin, final SuperAdmin step is unreachable due to self-approval restriction.
-      const workflowSteps = requesterRole === 'SuperAdmin' ? APPROVAL_STEPS.slice(0, 2) : APPROVAL_STEPS;
+      const workflowSteps = APPROVAL_STEPS;
 
       if (request.created_by === req.user.id) {
         throw new Error('You cannot approve your own request');

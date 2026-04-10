@@ -5,9 +5,8 @@
  */
 
 export const APPROVAL_STEPS = [
-  { step: 1, name: 'Supervisor/Manager Review', minRole: 'Manager', allowedRoles: ['Manager', 'Admin', 'SuperAdmin'] },
-  { step: 2, name: 'Manager/Admin Review', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
-  { step: 3, name: 'Admin/SuperAdmin Review', minRole: 'SuperAdmin', allowedRoles: ['SuperAdmin'] },
+  { step: 1, name: 'Supervisor Review', minRole: 'Manager', allowedRoles: ['Manager'] },
+  { step: 2, name: 'Quality Approval', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
 ];
 
 export const ROLE_HIERARCHY = {
@@ -17,12 +16,10 @@ export const ROLE_HIERARCHY = {
 };
 
 /**
- * Get workflow steps for a change request, accounting for requester role.
- * If requester is SuperAdmin, skip the final SuperAdmin step (self-approval prevention).
+ * Get workflow steps for a change request.
  */
 export const getWorkflowSteps = (change) => {
-  const requesterRole = change?.creator?.Role?.name;
-  return requesterRole === 'SuperAdmin' ? APPROVAL_STEPS.slice(0, 2) : APPROVAL_STEPS;
+  return APPROVAL_STEPS;
 };
 
 /**
@@ -44,6 +41,10 @@ export const canUserApprove = (change, user, currentUserId) => {
   
   const currentStep = getApprovalStep(change);
   if (!currentStep) return false;
+
+  if (Array.isArray(currentStep.allowedRoles) && !currentStep.allowedRoles.includes(user.role)) {
+    return false;
+  }
   
   const userLevel = ROLE_HIERARCHY[user.role] || 0;
   const requiredLevel = ROLE_HIERARCHY[currentStep.minRole] || 1;
@@ -70,4 +71,14 @@ export const getApprovalProgress = (change) => {
     isComplete: workflowSteps.length > 0 && approvedCount >= workflowSteps.length,
     percent: workflowSteps.length > 0 ? Math.min((approvedCount / workflowSteps.length) * 100, 100) : 0,
   };
+};
+
+/**
+ * Get assignee role label for the current approval step.
+ */
+export const getAssignedRoleLabel = (change) => {
+  const progress = getApprovalProgress(change);
+  if (!progress || progress.isComplete || !progress.currentStep) return 'Completed';
+  const roles = progress.currentStep.allowedRoles || [];
+  return roles.length > 0 ? roles.join(' / ') : progress.currentStep.minRole;
 };

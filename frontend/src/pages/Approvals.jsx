@@ -11,7 +11,7 @@ import {
   getApprovalStep as getApprovalStepHelper,
   canUserApprove as canUserApproveHelper,
   getApprovalProgress as getApprovalProgressHelper,
-  ROLE_HIERARCHY,
+  getAssignedRoleLabel,
 } from '../utils/approvalWorkflow';
 
 const Approvals = () => {
@@ -44,23 +44,7 @@ const Approvals = () => {
       const allChanges = response.data.data.rows || [];
       
       // Filter to show only changes this user can approve
-      const approvableChanges = allChanges.filter((change) => {
-        // User cannot approve their own request
-        if (String(change.created_by || '') === currentUserId) return false;
-        
-        // Get current approval step
-        const approvedCount = change.approvals?.filter(a => a.status === 'Approved').length || 0;
-        const workflowSteps = getWorkflowSteps(change);
-        const currentStep = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
-        if (!currentStep) return false;
-        
-        // Check if user can approve at this step (role hierarchy)
-        const userLevel = ROLE_HIERARCHY[user?.role] || 0;
-        const requiredLevel = ROLE_HIERARCHY[currentStep.minRole] || 1;
-        
-        const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === currentUserId);
-        return userLevel >= requiredLevel && !userApproval;
-      });
+      const approvableChanges = allChanges.filter((change) => canUserApproveHelper(change, user, currentUserId));
       
       setChanges(approvableChanges);
     } catch (error) {
@@ -164,6 +148,9 @@ const Approvals = () => {
                           </p>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                             Requested by {change.creator?.name || 'Unknown'} on {formatDate(change.created_at)}
+                          </p>
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                            Assigned To Role: {getAssignedRoleLabel(change)}
                           </p>
                         </div>
 
@@ -352,6 +339,7 @@ const Approvals = () => {
                           Current Step: {detailsProgress.currentStep?.name || (detailsProgress.isComplete ? 'Completed' : 'Pending')}
                         </p>
                         <p>Visible steps: {detailsProgress.workflowSteps.length}</p>
+                        <p>Assigned To Role: {getAssignedRoleLabel(detailsChange)}</p>
                       </div>
                     </div>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
