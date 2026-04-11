@@ -62,6 +62,8 @@ export const changeRequestService = {
 export const approvalService = {
   createApproval: (request_id, status, remarks) =>
     withConfirmation('Submit this approval decision?', () => api.post('/approvals', { request_id, status, remarks })),
+  changeApproval: (request_id, approval_id, status, remarks) =>
+    withConfirmation('Change this approval decision?', () => api.patch(`/approvals/${approval_id}`, { request_id, approval_id, status, remarks })),
   getApprovals: (requestId) => api.get(`/approvals/${requestId}`),
 };
 

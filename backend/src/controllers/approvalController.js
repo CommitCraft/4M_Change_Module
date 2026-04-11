@@ -152,6 +152,102 @@ export const approveRequest = async (req, res) => {
   }
 };
 
+export const changeApproval = async (req, res) => {
+  try {
+    const { request_id, approval_id, status, remarks } = req.body;
+
+    const result = await sequelize.transaction(async (transaction) => {
+      const request = await ChangeRequest.findByPk(request_id, { transaction });
+      if (!request) throw new Error('Change request not found');
+
+      const approval = await Approval.findByPk(approval_id, { transaction });
+      if (!approval) throw new Error('Approval record not found');
+
+      // Check that the approval belongs to this request
+      if (approval.request_id !== request_id) {
+        throw new Error('Approval does not belong to this request');
+      }
+
+      // Check that the request is still pending
+      if (request.status !== 'Pending') {
+        throw new Error('Cannot change approval for non-pending requests');
+      }
+
+      // Check that the user is the one who made the original approval
+      if (approval.approver_id !== req.user.id) {
+        throw new Error('You can only change your own approval decisions');
+      }
+
+      // Get all approvals to check workflow state
+      const allApprovals = await Approval.findAll({
+        where: { request_id },
+        order: [['approved_at', 'ASC']],
+        transaction,
+      });
+
+      const approvalIndex = allApprovals.findIndex((a) => a.id === approval_id);
+      const approvedCount = allApprovals.filter((a) => a.status === 'Approved').length;
+      const currentApprovalIsApproved = approval.status === 'Approved' ? 1 : 0;
+
+      // Check if any steps AFTER this one are approved
+      const laterApprovalsExist = allApprovals.slice(approvalIndex + 1).some((a) => a.status === 'Approved');
+      if (laterApprovalsExist) {
+        throw new Error('Cannot change approval when later steps have already been approved');
+      }
+
+      // Update the approval
+      approval.status = status;
+      approval.remarks = remarks;
+      await approval.save({ transaction });
+
+      // Recalculate request status based on new approval state
+      const updatedApprovals = await Approval.findAll({
+        where: { request_id },
+        transaction,
+      });
+      const newApprovedCount = updatedApprovals.filter((a) => a.status === 'Approved').length;
+      const workflowSteps = [
+        { step: 1, name: 'Supervisor Review', minRole: 'Manager', allowedRoles: ['Manager'] },
+        { step: 2, name: 'Quality Approval', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
+      ];
+
+      // If any approval is rejected, mark request as rejected
+      if (updatedApprovals.some((a) => a.status === 'Rejected')) {
+        request.status = 'Rejected';
+      } else if (newApprovedCount >= workflowSteps.length) {
+        request.status = 'Approved';
+      } else {
+        request.status = 'Pending';
+      }
+
+      await request.save({ transaction });
+
+      await AuditLog.create(
+        {
+          request_id,
+          user_id: req.user.id,
+          action: `APPROVAL_CHANGED_TO_${status.toUpperCase()}`,
+        },
+        { transaction }
+      );
+
+      return request;
+    });
+
+    const approvals = await Approval.findAll({
+      where: { request_id: result.id },
+      order: [['approved_at', 'ASC']],
+    });
+
+    sendResponse(res, 200, 'Approval updated successfully', {
+      ...(typeof result.toJSON === 'function' ? result.toJSON() : result),
+      ...getWorkflowMeta(result, approvals),
+    });
+  } catch (error) {
+    sendError(res, 400, error.message || 'Failed to change approval');
+  }
+};
+
 export const getApprovalsByRequest = async (req, res) => {
   try {
     const { request_id } = req.params;

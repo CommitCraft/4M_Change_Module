@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { changeRequestService, fileService } from '../services/api';
-import { formatDate, showError } from '../utils/helpers';
+import { changeRequestService, fileService, approvalService } from '../services/api';
+import { formatDate, showError, showSuccess } from '../utils/helpers';
+import { useAuth } from '../context/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import Modal from '../components/Modal';
 import { getAssignedRoleLabel, getWorkflowStatusLabel, getApprovalProgress } from '../utils/approvalWorkflow';
 
 const timelineSteps = [
@@ -18,10 +20,15 @@ const timelineSteps = [
 const RequestDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [request, setRequest] = useState(null);
   const [files, setFiles] = useState([]);
+  const [changeApprovalModal, setChangeApprovalModal] = useState(false);
+  const [selectedApproval, setSelectedApproval] = useState(null);
+  const [changeData, setChangeData] = useState({ status: 'Approved', remarks: '' });
+  const [changingApproval, setChangingApproval] = useState(false);
 
   useEffect(() => {
     const fetchDetail = async () => {
@@ -54,6 +61,31 @@ const RequestDetail = () => {
       link.remove();
     } catch (error) {
       showError('Failed to download file');
+    }
+  };
+
+  const handleChangeApproval = (approval) => {
+    setSelectedApproval(approval);
+    setChangeData({ status: approval.status, remarks: approval.remarks || '' });
+    setChangeApprovalModal(true);
+  };
+
+  const submitChangeApproval = async () => {
+    if (!selectedApproval) return;
+
+    try {
+      setChangingApproval(true);
+      await approvalService.changeApproval(request.id, selectedApproval.id, changeData.status, changeData.remarks);
+      showSuccess('Approval updated successfully!');
+      setChangeApprovalModal(false);
+      setSelectedApproval(null);
+      // Refresh the request detail
+      const detailRes = await changeRequestService.getChangeRequestById(id);
+      setRequest(detailRes.data.data);
+    } catch (error) {
+      showError(error.response?.data?.message || 'Failed to change approval');
+    } finally {
+      setChangingApproval(false);
     }
   };
 
@@ -363,28 +395,47 @@ const RequestDetail = () => {
               <p className="text-sm text-gray-500">No approval actions recorded yet.</p>
             ) : (
               <div className="space-y-3">
-                {request.approvals.map((approval, idx) => (
-                  <div key={approval.id || idx} className="p-3 border rounded dark:border-gray-700">
-                    <div className="flex justify-between items-center gap-3 mb-1">
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                        {approval.approver?.name || 'Unknown Reviewer'}
+                {request.approvals.map((approval, idx) => {
+                  const isCurrentUserApproval = approval.approver_id === user?.id;
+                  const canChangeApproval = isCurrentUserApproval && request.status === 'Pending';
+                  
+                  return (
+                    <div key={approval.id || idx} className={`p-3 border rounded dark:border-gray-700 ${canChangeApproval ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <div className="flex justify-between items-center gap-3 mb-1">
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                            {approval.approver?.name || 'Unknown Reviewer'}
+                            {isCurrentUserApproval && <span className="text-xs ml-2 text-blue-600 dark:text-blue-300">(You)</span>}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-semibold ${
+                              approval.status === 'Approved'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                                : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'
+                            }`}
+                          >
+                            {approval.status}
+                          </span>
+                          {canChangeApproval && (
+                            <button
+                              type="button"
+                              onClick={() => handleChangeApproval(approval)}
+                              className="px-2 py-1 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700"
+                            >
+                              Change
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {approval.approved_at ? formatDate(approval.approved_at) : 'Time not available'}
                       </p>
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          approval.status === 'Approved'
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-                            : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'
-                        }`}
-                      >
-                        {approval.status}
-                      </span>
+                      {approval.remarks && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{approval.remarks}</p>}
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {approval.approved_at ? formatDate(approval.approved_at) : 'Time not available'}
-                    </p>
-                    {approval.remarks && <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{approval.remarks}</p>}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -400,6 +451,77 @@ const RequestDetail = () => {
           </div>
         </div>
       </main>
+
+      {/* CHANGE APPROVAL MODAL */}
+      <Modal
+        isOpen={changeApprovalModal}
+        title="Change Approval Decision"
+        onClose={() => setChangeApprovalModal(false)}
+      >
+        {selectedApproval && (
+          <div className="space-y-4">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">You can change your approval decision for this request.</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Note: Changes are only allowed if no subsequent steps have been approved.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Approval Status</label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="Approved"
+                    checked={changeData.status === 'Approved'}
+                    onChange={(e) => setChangeData({ ...changeData, status: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">✓ Approve</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    value="Rejected"
+                    checked={changeData.status === 'Rejected'}
+                    onChange={(e) => setChangeData({ ...changeData, status: e.target.value })}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">✗ Reject</span>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Remarks (Optional)</label>
+              <textarea
+                value={changeData.remarks}
+                onChange={(e) => setChangeData({ ...changeData, remarks: e.target.value })}
+                placeholder="Add any comments about your decision..."
+                className="w-full px-3 py-2 border rounded dark:bg-gray-800 dark:border-gray-600 dark:text-gray-200 text-sm"
+                rows={3}
+              />
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setChangeApprovalModal(false)}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitChangeApproval}
+                disabled={changingApproval}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {changingApproval ? 'Updating...' : 'Update Approval'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
