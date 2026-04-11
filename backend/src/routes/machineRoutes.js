@@ -15,7 +15,7 @@ import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 router.use(authMiddleware);
 
 // GET all machines
-router.get('/', authorizePermissions('masters.machine.read'), getMachines);
+router.get('/', getMachines);
 
 // POST create a new machine
 router.post('/', authorizePermissions('masters.machine.create'), ...getValidationForSchema('machine'), createMachine);

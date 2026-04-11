@@ -15,7 +15,7 @@ import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 router.use(authMiddleware);
 
 // GET all production lines
-router.get('/', authorizePermissions('masters.productionline.read'), getProductionLines);
+router.get('/', getProductionLines);
 
 // POST create a new production line
 router.post('/', authorizePermissions('masters.productionline.create'), ...getValidationForSchema('productionLine'), createProductionLine);

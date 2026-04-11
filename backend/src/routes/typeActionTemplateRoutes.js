@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all type action templates
-router.get('/', authorizePermissions('masters.type_action_template.read'), getTypeActionTemplates);
+router.get('/', getTypeActionTemplates);
 
 // POST create a new type action template
 router.post('/', authorizePermissions('masters.type_action_template.create'), ...getValidationForSchema('typeActionTemplate'), createTypeActionTemplate);

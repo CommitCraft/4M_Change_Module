@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all operators
-router.get('/', authorizePermissions('masters.operator.read'), getOperators);
+router.get('/', getOperators);
 
 // POST create a new operator
 router.post('/', authorizePermissions('masters.operator.create'), ...getValidationForSchema('operator'), createOperator);

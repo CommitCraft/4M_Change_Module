@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all machine-skill requirements
-router.get('/', authorizePermissions('masters.machine_skill_requirement.read'), getMachineSkillRequirements);
+router.get('/', getMachineSkillRequirements);
 
 // POST create a new machine-skill requirement
 router.post('/', authorizePermissions('masters.machine_skill_requirement.create'), ...getValidationForSchema('machineSkillRequirement'), createMachineSkillRequirement);

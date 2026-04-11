@@ -15,6 +15,23 @@ export const ROLE_HIERARCHY = {
   SuperAdmin: 3,
 };
 
+export const getApprovalEntries = (change) => {
+  if (!change) return [];
+  if (Array.isArray(change.approvals)) return change.approvals;
+  if (Array.isArray(change.Approvals)) return change.Approvals;
+  return [];
+};
+
+const countApprovedSteps = (change) => {
+  const stageCount = Number.parseInt(change?.approval_stage_count, 10);
+  if (Number.isFinite(stageCount) && stageCount >= 0) {
+    return stageCount;
+  }
+
+  const approvals = getApprovalEntries(change);
+  return approvals.filter((approval) => String(approval?.status || '').toLowerCase() === 'approved').length;
+};
+
 /**
  * Get workflow steps for a change request.
  */
@@ -27,7 +44,7 @@ export const getWorkflowSteps = (change) => {
  */
 export const getApprovalStep = (change) => {
   if (!change) return null;
-  const approvedCount = change.approvals?.filter(a => a.status === 'Approved').length || 0;
+  const approvedCount = countApprovedSteps(change);
   const workflowSteps = getWorkflowSteps(change);
   return workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)] || null;
 };
@@ -48,8 +65,9 @@ export const canUserApprove = (change, user, currentUserId) => {
   
   const userLevel = ROLE_HIERARCHY[user.role] || 0;
   const requiredLevel = ROLE_HIERARCHY[currentStep.minRole] || 1;
-  
-  const userApproval = change.approvals?.find((a) => String(a.approver_id || '') === String(currentUserId));
+
+  const approvals = getApprovalEntries(change);
+  const userApproval = approvals.find((a) => String(a.approver_id || '') === String(currentUserId));
   
   return userLevel >= requiredLevel && !userApproval;
 };
@@ -60,9 +78,7 @@ export const canUserApprove = (change, user, currentUserId) => {
 export const getApprovalProgress = (change) => {
   if (!change) return null;
   const workflowSteps = getWorkflowSteps(change);
-  const approvedCount = typeof change.approval_stage_count === 'number'
-    ? change.approval_stage_count
-    : change.approvals?.filter((approval) => approval.status === 'Approved').length || 0;
+  const approvedCount = countApprovedSteps(change);
   const currentIndex = workflowSteps.length === 0 ? -1 : Math.min(approvedCount, workflowSteps.length - 1);
   const currentStep = currentIndex >= 0 ? workflowSteps[currentIndex] : null;
 

@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all type requirements
-router.get('/', authorizePermissions('masters.type_requirement.read'), getTypeRequirements);
+router.get('/', getTypeRequirements);
 
 // POST create a new type requirement
 router.post('/', authorizePermissions('masters.type_requirement.create'), ...getValidationForSchema('typeRequirement'), createTypeRequirement);

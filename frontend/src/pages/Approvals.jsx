@@ -13,6 +13,7 @@ import {
   getApprovalProgress as getApprovalProgressHelper,
   getAssignedRoleLabel,
   getWorkflowStatusLabel,
+  getApprovalEntries,
 } from '../utils/approvalWorkflow';
 
 const Approvals = () => {
@@ -44,8 +45,11 @@ const Approvals = () => {
       const response = await changeRequestService.getChangeRequests({ status: 'Pending' });
       const allChanges = response.data.data.rows || [];
       
-      // Filter to show only changes this user can approve
-      const approvableChanges = allChanges.filter((change) => canUserApproveHelper(change, user, currentUserId));
+      // Keep requests visible if user can approve now OR already reviewed them.
+      const approvableChanges = allChanges.filter((change) => {
+        if (canUserApproveHelper(change, user, currentUserId)) return true;
+        return Boolean(getMyReview(change));
+      });
       
       setChanges(approvableChanges);
     } catch (error) {
@@ -58,6 +62,9 @@ const Approvals = () => {
   const getApprovalStep = (change) => getApprovalStepHelper(change);
 
   const canUserApprove = (change) => canUserApproveHelper(change, user, currentUserId);
+
+  const getMyReview = (change) =>
+    getApprovalEntries(change).find((a) => String(a.approver_id || '') === currentUserId) || null;
 
   const handleApprove = (change) => {
     if (!canUserApprove(change)) {
@@ -129,6 +136,8 @@ const Approvals = () => {
                 const currentStep = getApprovalStep(change);
                 const progress = getApprovalProgress(change);
                 const { approvedCount, workflowSteps } = progress;
+                const myReview = getMyReview(change);
+                const isReviewed = Boolean(myReview);
                 
                 return (
                   <div key={change.id} className="card">
@@ -153,6 +162,11 @@ const Approvals = () => {
                           <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
                             Assigned To Role: {getAssignedRoleLabel(change)}
                           </p>
+                          {isReviewed && (
+                            <p className={`text-sm mt-1 font-semibold ${myReview.status === 'Approved' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
+                              {myReview.status === 'Approved' ? 'Reviewed by you: Approved ✓' : 'Reviewed by you: Rejected ✗'}
+                            </p>
+                          )}
                         </div>
 
                         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -236,14 +250,24 @@ const Approvals = () => {
                       {hasPermission('approvals.approve') && (
                         <button
                           onClick={() => handleApprove(change)}
-                          disabled={!canUserApprove(change)}
+                          disabled={!canUserApprove(change) || isReviewed}
                           className={`ml-4 px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-                            canUserApprove(change)
+                            isReviewed
+                              ? myReview.status === 'Approved'
+                                ? 'bg-green-600 text-white cursor-not-allowed'
+                                : 'bg-red-600 text-white cursor-not-allowed'
+                              : canUserApprove(change)
                               ? 'btn-primary'
                               : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
                           }`}
                         >
-                          {canUserApprove(change) ? 'Review & Approve' : 'Not Your Step'}
+                          {isReviewed
+                            ? myReview.status === 'Approved'
+                              ? 'Reviewed ✓'
+                              : 'Reviewed ✗'
+                            : canUserApprove(change)
+                            ? 'Review & Approve'
+                            : 'Not Your Step'}
                         </button>
                       )}
                     </div>
@@ -380,9 +404,9 @@ const Approvals = () => {
 
                   <div className="space-y-3">
                     <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Approval History</h4>
-                    {detailsChange.approvals && detailsChange.approvals.length > 0 ? (
+                    {getApprovalEntries(detailsChange).length > 0 ? (
                       <div className="space-y-2">
-                        {detailsChange.approvals.map((approval) => (
+                        {getApprovalEntries(detailsChange).map((approval) => (
                           <div key={approval.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <p className="font-semibold text-gray-800 dark:text-gray-200">

@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all operator-skill mappings
-router.get('/', authorizePermissions('masters.operator_skill_map.read'), getOperatorSkillMaps);
+router.get('/', getOperatorSkillMaps);
 
 // POST create a new operator-skill mapping
 router.post('/', authorizePermissions('masters.operator_skill_map.create'), ...getValidationForSchema('operatorSkillMap'), createOperatorSkillMap);

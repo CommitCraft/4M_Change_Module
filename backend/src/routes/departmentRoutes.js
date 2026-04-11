@@ -16,7 +16,6 @@ router.use(authMiddleware);
 
 router.get(
   '/',
-  authorizePermissions('masters.department.read'),
   query('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
   validateRequest,
   getDepartments

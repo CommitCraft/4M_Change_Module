@@ -3,7 +3,7 @@ import sequelize, { connectDatabase } from './database.js';
 import models from '../models/index.js';
 import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
 
-const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData, Department } = models;
+const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData, Department, BusinessRole } = models;
 
 const ALL_ROLES = ['SuperAdmin', 'Admin', 'Manager', 'User'];
 
@@ -58,6 +58,36 @@ const DEFAULT_MASTER_DATA = [
   { category: 'type_action_template', type: 'Machine', name: 'Schedule machine trial and calibration' },
   { category: 'type_action_template', type: 'Method', name: 'Train team on revised SOP' },
   { category: 'type_action_template', type: 'Material', name: 'Run pilot lot and monitor defects' },
+];
+
+const DEFAULT_BUSINESS_ROLES = [
+  // Man
+  { m_module: 'Man', role_name: 'Operator / Technician', focus_area: 'Skill, training, discipline, safety' },
+  { m_module: 'Man', role_name: 'Supervisor', focus_area: 'Skill, training, discipline, safety' },
+  { m_module: 'Man', role_name: 'Production Engineer', focus_area: 'Skill, training, discipline, safety' },
+  { m_module: 'Man', role_name: 'Quality Inspector / QA Engineer', focus_area: 'Skill, training, discipline, safety' },
+  { m_module: 'Man', role_name: 'Training & Skill Development Team', focus_area: 'Skill, training, discipline, safety' },
+
+  // Machine
+  { m_module: 'Machine', role_name: 'Maintenance Engineer', focus_area: 'Machine condition, breakdown, calibration' },
+  { m_module: 'Machine', role_name: 'Tool Room Engineer', focus_area: 'Machine condition, breakdown, calibration' },
+  { m_module: 'Machine', role_name: 'Automation Engineer', focus_area: 'Machine condition, breakdown, calibration' },
+  { m_module: 'Machine', role_name: 'Equipment Owner / Machine In-charge', focus_area: 'Machine condition, breakdown, calibration' },
+
+  // Material
+  { m_module: 'Material', role_name: 'Store / Inventory Manager', focus_area: 'Raw material quality, availability, traceability' },
+  { m_module: 'Material', role_name: 'Procurement / Purchase Team', focus_area: 'Raw material quality, availability, traceability' },
+  { m_module: 'Material', role_name: 'Quality Control (Incoming Inspection)', focus_area: 'Raw material quality, availability, traceability' },
+  { m_module: 'Material', role_name: 'Supplier Quality Engineer', focus_area: 'Raw material quality, availability, traceability' },
+
+  // Method
+  { m_module: 'Method', role_name: 'Process Engineer', focus_area: 'Process flow, SOPs, cycle time, standardization' },
+  { m_module: 'Method', role_name: 'Industrial Engineer', focus_area: 'Process flow, SOPs, cycle time, standardization' },
+  { m_module: 'Method', role_name: 'Continuous Improvement (CI) Team', focus_area: 'Process flow, SOPs, cycle time, standardization' },
+  { m_module: 'Method', role_name: 'Documentation / SOP Owner', focus_area: 'Process flow, SOPs, cycle time, standardization' },
+
+  // User (general)
+  { m_module: 'User', role_name: 'General User / Requester', focus_area: 'Create requests, track status, collaboration' },
 ];
 
 const validateDbName = (dbName) => {
@@ -139,6 +169,21 @@ export const seedCoreData = async () => {
         category: item.category,
         type: item.type || null,
         name: item.name,
+      },
+    });
+  }
+
+  for (const role of DEFAULT_BUSINESS_ROLES) {
+    await BusinessRole.findOrCreate({
+      where: {
+        m_module: role.m_module,
+        role_name: role.role_name,
+      },
+      defaults: {
+        m_module: role.m_module,
+        role_name: role.role_name,
+        focus_area: role.focus_area,
+        status: 'Active',
       },
     });
   }

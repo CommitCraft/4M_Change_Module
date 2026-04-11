@@ -22,6 +22,7 @@ import MasterData from './MasterData.js';
 import MonitoringPeriod from './MonitoringPeriod.js';
 import GuidedSetupProgress from './GuidedSetupProgress.js';
 import Department from './Department.js';
+import BusinessRole from './BusinessRole.js';
 
 Role.hasMany(User, { foreignKey: 'role_id' });
 User.belongsTo(Role, { foreignKey: 'role_id' });
@@ -51,6 +52,7 @@ User.belongsTo(Department, { foreignKey: 'department_id' });
 export default {
   sequelize,
   Department,
+  BusinessRole,
   Role,
   RolePermission,
   User,

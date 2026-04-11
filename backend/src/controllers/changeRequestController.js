@@ -9,7 +9,11 @@ const WORKFLOW_STEPS = [
 ];
 
 const getApprovalWorkflowMeta = (request) => {
-  const approvals = request?.approvals || [];
+  const approvals = Array.isArray(request?.approvals)
+    ? request.approvals
+    : Array.isArray(request?.Approvals)
+    ? request.Approvals
+    : [];
   const approvedCount = approvals.filter((approval) => approval.status === 'Approved').length;
   const currentStep = WORKFLOW_STEPS[Math.min(approvedCount, WORKFLOW_STEPS.length - 1)] || null;
   const isComplete = approvedCount >= WORKFLOW_STEPS.length;

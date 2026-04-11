@@ -25,6 +25,7 @@ import typeRequirementRoutes from './typeRequirementRoutes.js';
 import userRoutes from './userRoutes.js';
 
 import riskLevelRoutes from './riskLevelRoutes.js';
+import businessRoleRoutes from './businessRoleRoutes.js';
 
 const router = express.Router();
 
@@ -46,6 +47,7 @@ router.use('/roles', roleRoutes);
 router.use('/skills', skillRoutes);
 router.use('/training-programs', trainingProgramRoutes);
 router.use('/risk-levels', riskLevelRoutes);
+router.use('/business-roles', businessRoleRoutes);
 router.use('/type-action-templates', typeActionTemplateRoutes);
 router.use('/type-requirements', typeRequirementRoutes);
 router.use('/users', userRoutes);

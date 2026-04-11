@@ -15,7 +15,7 @@ import { authMiddleware, authorizePermissions } from '../middleware/auth.js';
 router.use(authMiddleware);
 
 // GET all skills
-router.get('/', authorizePermissions('masters.skill.read'), getSkills);
+router.get('/', getSkills);
 
 // POST create a new skill
 router.post('/', authorizePermissions('masters.skill.create'), ...getValidationForSchema('skill'), createSkill);

@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all change subtypes
-router.get('/', authorizePermissions('masters.change_subtype.read'), getChangeSubTypes);
+router.get('/', getChangeSubTypes);
 
 // POST create a new change subtype
 router.post('/', authorizePermissions('masters.change_subtype.create'), ...getValidationForSchema('changeSubType'), createChangeSubType);

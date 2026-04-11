@@ -186,4 +186,8 @@ export const masterService = {
   delete: (id) => withConfirmation('Delete master entry?', () => api.delete(`/masters/${id}`)),
 };
 
+export const businessRoleService = {
+  getAll: (filters = {}) => api.get('/business-roles', { params: filters }),
+};
+
 export default api;

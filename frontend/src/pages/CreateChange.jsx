@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changeRequestService, fileService, departmentService, productionLineService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, trainingProgramService, typeRequirementService, typeActionTemplateService, riskLevelService } from '../services/api';
+import { changeRequestService, fileService, departmentService, productionLineService, machineService, changeSubTypeService, operatorService, skillService, operatorSkillMapService, machineSkillRequirementService, trainingProgramService, typeRequirementService, typeActionTemplateService, riskLevelService, businessRoleService } from '../services/api';
 import { showError, showSuccess } from '../utils/helpers';
 import FormInput from '../components/FormInput';
 import Navbar from '../components/Navbar';
@@ -96,6 +96,7 @@ const CreateChange = () => {
   const [trainingPrograms, setTrainingPrograms] = useState({});
   const [typeRequirementsMap, setTypeRequirementsMap] = useState({});
   const [typeActionTemplateMap, setTypeActionTemplateMap] = useState({});
+  const [businessRolesByType, setBusinessRolesByType] = useState({});
   const [manAssessment, setManAssessment] = useState({
     requiredSkills: [],
     operatorSkills: [],
@@ -105,11 +106,18 @@ const CreateChange = () => {
   const [typeGovernance, setTypeGovernance] = useState({ requirements: [], actionTemplates: [] });
   const navigate = useNavigate();
 
+  const businessRoleOptions = useMemo(() => {
+    const moduleRoles = businessRolesByType[formData.type] || [];
+    const names = moduleRoles.map((item) => item.role_name).filter(Boolean);
+    if (names.length > 0) return names;
+    return formData.type === 'Man' ? operatorOptions : [];
+  }, [businessRolesByType, formData.type, operatorOptions]);
+
 
   // Load masters and risk levels
   const loadMasters = useCallback(async () => {
     try {
-      const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes, riskLevelsRes] = await Promise.all([
+      const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes, riskLevelsRes, businessRolesRes] = await Promise.all([
         departmentService.getAll(),
         productionLineService.getAll(),
         machineService.getAll(),
@@ -122,6 +130,7 @@ const CreateChange = () => {
         typeRequirementService.getAll(),
         typeActionTemplateService.getAll(),
         riskLevelService.getAll(),
+        businessRoleService.getAll({ status: 'Active' }),
       ]);
       const departments = (departmentsRes.data.data || []).map((r) => r.name);
       const productionLines = (productionLinesRes.data.data || []).map((r) => r.name);
@@ -135,6 +144,7 @@ const CreateChange = () => {
       const typeRequirementRows = typeRequirementsRes.data.data || [];
       const typeActionRows = typeActionTemplatesRes.data.data || [];
       const riskLevels = (riskLevelsRes.data.data || []).filter(l => l.status === 'Active').map(l => l.name);
+      const businessRoleRows = businessRolesRes.data.data || [];
 
       const grouped = subtypes.reduce((acc, item) => {
         const key = item.type || 'General';
@@ -178,6 +188,13 @@ const CreateChange = () => {
         return acc;
       }, {});
 
+      const groupedBusinessRoles = businessRoleRows.reduce((acc, item) => {
+        const key = item.m_module || 'General';
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+      }, {});
+
       if (departments.length > 0) setDepartmentOptions(departments);
       if (productionLines.length > 0) setProductionLineOptions(productionLines);
       if (machines.length > 0) setMachineOptions(machines);
@@ -189,6 +206,7 @@ const CreateChange = () => {
       setTrainingPrograms(groupedTraining);
       setTypeRequirementsMap(groupedTypeRequirements);
       setTypeActionTemplateMap(groupedTypeActions);
+      setBusinessRolesByType(groupedBusinessRoles);
       if (riskLevels.length > 0) setRiskOptions(riskLevels);
     } catch (error) {
       // Keep fallback options when master API is unavailable.
@@ -503,19 +521,19 @@ const CreateChange = () => {
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Section 2A - Operator Skill & Training Check</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Operator</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Operator / Role</label>
                     <select name="current_operator" value={formData.current_operator} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
-                      <option value="">Select current operator</option>
-                      {operatorOptions.map((op) => (
+                      <option value="">Select current operator or role</option>
+                      {businessRoleOptions.map((op) => (
                         <option key={op} value={op}>{op}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposed Operator</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposed Operator / Role</label>
                     <select name="proposed_operator" value={formData.proposed_operator} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
-                      <option value="">Select proposed operator</option>
-                      {operatorOptions.map((op) => (
+                      <option value="">Select proposed operator or role</option>
+                      {businessRoleOptions.map((op) => (
                         <option key={op} value={op}>{op}</option>
                       ))}
                     </select>
@@ -560,6 +578,26 @@ const CreateChange = () => {
             ) : (
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Section 2A - Type Governance Guidance</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Current Role (Optional)</label>
+                    <select name="current_operator" value={formData.current_operator} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
+                      <option value="">Select current role</option>
+                      {businessRoleOptions.map((roleName) => (
+                        <option key={roleName} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Proposed Role (Optional)</label>
+                    <select name="proposed_operator" value={formData.proposed_operator} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600">
+                      <option value="">Select proposed role</option>
+                      {businessRoleOptions.map((roleName) => (
+                        <option key={roleName} value={roleName}>{roleName}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 <div className="grid md:grid-cols-2 gap-4 text-sm">
                   <div className="p-3 border rounded dark:border-gray-700">
                     <p className="font-semibold mb-1">Mandatory Requirements</p>

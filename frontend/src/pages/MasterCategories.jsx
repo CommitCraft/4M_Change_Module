@@ -1,15 +1,43 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { FOUR_M_CATEGORIES, FOUR_M_TYPES, getSubCategoriesByType } from '../utils/changeCategories';
+import { businessRoleService } from '../services/api';
+import { showError } from '../utils/helpers';
 
 const MasterCategories = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeType, setActiveType] = useState('Man');
   const [dropdownType, setDropdownType] = useState('Man');
+  const [roleModule, setRoleModule] = useState('Man');
+  const [businessRoles, setBusinessRoles] = useState([]);
+  const [selectedBusinessRole, setSelectedBusinessRole] = useState('');
 
   const dropdownOptions = useMemo(() => getSubCategoriesByType(dropdownType), [dropdownType]);
   const [dropdownSubCategory, setDropdownSubCategory] = useState(dropdownOptions[0] || '');
+  const roleOptions = useMemo(
+    () => businessRoles.filter((role) => role.m_module === roleModule && role.status === 'Active'),
+    [businessRoles, roleModule]
+  );
+
+  useEffect(() => {
+    const fetchBusinessRoles = async () => {
+      try {
+        const response = await businessRoleService.getAll({ status: 'Active' });
+        const rows = response?.data?.data || [];
+        setBusinessRoles(Array.isArray(rows) ? rows : []);
+      } catch (error) {
+        showError('Failed to load business roles');
+        setBusinessRoles([]);
+      }
+    };
+
+    fetchBusinessRoles();
+  }, []);
+
+  useEffect(() => {
+    setSelectedBusinessRole(roleOptions[0]?.role_name || '');
+  }, [roleModule, roleOptions]);
 
   const handleTypeChange = (value) => {
     setDropdownType(value);
@@ -98,6 +126,52 @@ const MasterCategories = () => {
                 </select>
               </div>
             </div>
+          </div>
+
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Business Roles Dropdown (Live API)</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">4M Module</label>
+                <select
+                  value={roleModule}
+                  onChange={(e) => setRoleModule(e.target.value)}
+                  className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+                >
+                  {['Man', 'Machine', 'Material', 'Method', 'User'].map((moduleName) => (
+                    <option key={moduleName} value={moduleName}>
+                      {moduleName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Business Role</label>
+                <select
+                  value={selectedBusinessRole}
+                  onChange={(e) => setSelectedBusinessRole(e.target.value)}
+                  className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+                >
+                  {roleOptions.length === 0 ? (
+                    <option value="">No active roles found</option>
+                  ) : (
+                    roleOptions.map((role) => (
+                      <option key={role.id} value={role.role_name}>
+                        {role.role_name}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {selectedBusinessRole && (
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                Focus Area:{' '}
+                {roleOptions.find((role) => role.role_name === selectedBusinessRole)?.focus_area || '-'}
+              </p>
+            )}
           </div>
         </div>
       </main>

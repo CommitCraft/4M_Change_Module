@@ -13,7 +13,7 @@ const router = express.Router();
 router.use(authMiddleware);
 
 // GET all training programs
-router.get('/', authorizePermissions('masters.training_program.read'), getTrainingPrograms);
+router.get('/', getTrainingPrograms);
 
 // POST create a new training program
 router.post('/', authorizePermissions('masters.training_program.create'), ...getValidationForSchema('trainingProgram'), createTrainingProgram);
