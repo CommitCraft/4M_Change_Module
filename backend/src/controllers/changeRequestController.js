@@ -332,6 +332,9 @@ export const updateChangeRequest = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = { ...req.body };
+    const hasPermission = (permission) =>
+      req.user.role === 'SuperAdmin' || (req.user.permissions || []).includes(permission);
+    const isAdminRole = ['Admin', 'SuperAdmin'].includes(req.user.role);
 
     const request = await ChangeRequest.findByPk(id);
     if (!request) {
@@ -342,19 +345,33 @@ export const updateChangeRequest = async (req, res) => {
       return sendError(res, 403, 'Unauthorized');
     }
 
-    // Check if approvals have been recorded - prevent updates after approval started
+    const isImplementationTransition = updates.status === 'Implemented';
+    const isCloseTransition = updates.status === 'Closed';
+    const isMonitoringFieldUpdate =
+      Object.prototype.hasOwnProperty.call(updates, 'monitoring_period') ||
+      Object.prototype.hasOwnProperty.call(updates, 'quality_result') ||
+      Object.prototype.hasOwnProperty.call(updates, 'defect_rate') ||
+      Object.prototype.hasOwnProperty.call(updates, 'monitoring_comments');
+
+    const isWorkflowControlledUpdate = isImplementationTransition || isCloseTransition || isMonitoringFieldUpdate;
+
+    // Lock business field edits once approval has started, but allow controlled workflow updates.
     const approvalCount = await Approval.count({ where: { request_id: id } });
     const isLockedForEdit = request.status !== 'Rejected' && approvalCount > 0;
-    if (isLockedForEdit) {
+    if (isLockedForEdit && !isWorkflowControlledUpdate) {
       return sendError(res, 403, 'Cannot modify request until it is rejected');
     }
 
-    if (updates.status === 'Implemented' && !['Admin', 'SuperAdmin'].includes(req.user.role)) {
-      return sendError(res, 403, 'Only Admin or SuperAdmin can mark as Implemented');
+    if (updates.status === 'Implemented' && (!isAdminRole || !hasPermission('changes.implement'))) {
+      return sendError(res, 403, 'You do not have permission to mark requests as Implemented');
     }
 
-    if (updates.status === 'Closed' && !['Admin', 'SuperAdmin'].includes(req.user.role)) {
-      return sendError(res, 403, 'Only Admin or SuperAdmin can close requests');
+    if (updates.status === 'Closed' && (!isAdminRole || !hasPermission('changes.close'))) {
+      return sendError(res, 403, 'You do not have permission to close requests');
+    }
+
+    if (isMonitoringFieldUpdate && (!isAdminRole || !hasPermission('changes.monitor'))) {
+      return sendError(res, 403, 'You do not have permission to update monitoring details');
     }
 
     if (updates.status === 'Implemented' && request.status !== 'Approved') {
@@ -373,9 +390,11 @@ export const updateChangeRequest = async (req, res) => {
 
     await request.update(finalUpdates);
 
+    const action = updates.status === 'Implemented' ? 'IMPLEMENTED' : updates.status === 'Closed' ? 'CLOSED' : 'UPDATED';
+
     await AuditLog.create({
       request_id: id,
-      action: updates.status === 'Implemented' ? 'IMPLEMENTED' : 'UPDATED',
+      action,
       user_id: req.user.id,
     });
 

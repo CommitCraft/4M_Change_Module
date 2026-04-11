@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 router.post('/', authorizePermissions('approvals.approve'), approveValidation, validateRequest, approveRequest);
-router.patch('/:approval_id', authorizePermissions('approvals.approve'), approveValidation, validateRequest, changeApproval);
+router.patch('/:approval_id', authorizePermissions('approvals.change', 'approvals.approve'), approveValidation, validateRequest, changeApproval);
 router.get(
   '/:request_id',
   authorizePermissions('approvals.read'),

@@ -130,7 +130,7 @@ function App() {
           <Route
             path="/implementation"
             element={
-              <ProtectedRoute requiredPermission="changes.update" allowedRoles={['Admin', 'SuperAdmin']}>
+              <ProtectedRoute requiredPermission="changes.implement" allowedRoles={['Admin', 'SuperAdmin']}>
                 <ImplementationPage />
               </ProtectedRoute>
             }
@@ -138,7 +138,7 @@ function App() {
           <Route
             path="/monitoring"
             element={
-              <ProtectedRoute requiredPermission="changes.update" allowedRoles={['Admin', 'SuperAdmin']}>
+              <ProtectedRoute requiredPermission="changes.monitor" allowedRoles={['Admin', 'SuperAdmin']}>
                 <MonitoringPage />
               </ProtectedRoute>
             }

@@ -400,7 +400,7 @@ const Approvals = () => {
                       <div className="space-y-2">
                         {getApprovalEntries(detailsChange).map((approval) => {
                           const isCurrentUserApproval = approval.approver_id === user?.id;
-                          const canChangeApproval = isCurrentUserApproval && detailsChange.status === 'Pending';
+                          const canChangeApproval = isCurrentUserApproval && detailsChange.status === 'Pending' && hasPermission('approvals.change');
                           
                           return (
                             <div key={approval.id} className={`rounded-lg border border-gray-200 dark:border-gray-700 p-3 ${canChangeApproval ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>

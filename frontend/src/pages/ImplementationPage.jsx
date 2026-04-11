@@ -7,7 +7,7 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
 const ImplementationPage = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [changes, setChanges] = useState([]);
@@ -17,7 +17,7 @@ const ImplementationPage = () => {
   const [form, setForm] = useState({ implementation_date: '', implemented_by: '', trial_result: '', observation: '' });
   const [loadError, setLoadError] = useState('');
 
-  const canImplement = ['Admin', 'SuperAdmin'].includes(user?.role);
+  const canImplement = hasPermission('changes.implement') && ['Admin', 'SuperAdmin'].includes(user?.role);
 
   const fetchApproved = async () => {
     try {
@@ -93,6 +93,9 @@ const ImplementationPage = () => {
       <Sidebar isOpen={sidebarOpen} />
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6`}>
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">Implementation Page</h1>
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          Implementation stage owner: <span className="font-semibold">Admin / SuperAdmin</span>. After implementation, request moves to Monitoring stage.
+        </div>
 
         {!!loadError && (
           <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">

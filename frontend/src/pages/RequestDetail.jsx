@@ -20,7 +20,7 @@ const timelineSteps = [
 const RequestDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [request, setRequest] = useState(null);
@@ -397,7 +397,7 @@ const RequestDetail = () => {
               <div className="space-y-3">
                 {request.approvals.map((approval, idx) => {
                   const isCurrentUserApproval = approval.approver_id === user?.id;
-                  const canChangeApproval = isCurrentUserApproval && request.status === 'Pending';
+                  const canChangeApproval = isCurrentUserApproval && request.status === 'Pending' && hasPermission('approvals.change');
                   
                   return (
                     <div key={approval.id || idx} className={`p-3 border rounded dark:border-gray-700 ${canChangeApproval ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>

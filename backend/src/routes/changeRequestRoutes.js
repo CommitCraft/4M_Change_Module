@@ -24,7 +24,13 @@ router.get('/dashboard/stats', authorizePermissions('dashboard.view', 'changes.r
 router.post('/', authorizePermissions('changes.create'), createChangeValidation, validateRequest, createChangeRequest);
 router.get('/', authorizePermissions('changes.read', 'changes.update'), queryValidation, validateRequest, getChangeRequests);
 router.get('/:id', authorizePermissions('changes.read'), idParamValidation, validateRequest, getChangeRequestById);
-router.put('/:id', authorizePermissions('changes.update'), updateChangeValidation, validateRequest, updateChangeRequest);
+router.put(
+  '/:id',
+  authorizePermissions('changes.update', 'changes.implement', 'changes.monitor', 'changes.close'),
+  updateChangeValidation,
+  validateRequest,
+  updateChangeRequest
+);
 router.delete('/:id', authorizePermissions('changes.delete'), idParamValidation, validateRequest, deleteChangeRequest);
 
 export default router;

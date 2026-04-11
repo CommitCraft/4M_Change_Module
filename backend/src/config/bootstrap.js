@@ -155,13 +155,21 @@ export const seedCoreData = async () => {
     });
 
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[roleName] || [];
-    await RolePermission.findOrCreate({
+    const [rolePermission, created] = await RolePermission.findOrCreate({
       where: { role_id: role.id },
       defaults: {
         role_id: role.id,
         permissions: defaultPermissions,
       },
     });
+
+    if (!created) {
+      const currentPermissions = Array.isArray(rolePermission.permissions) ? rolePermission.permissions : [];
+      const mergedPermissions = Array.from(new Set([...currentPermissions, ...defaultPermissions]));
+      if (mergedPermissions.length !== currentPermissions.length) {
+        await rolePermission.update({ permissions: mergedPermissions });
+      }
+    }
   }
 
   for (const department of DEFAULT_DEPARTMENTS) {

@@ -12,7 +12,7 @@ import { useAuth } from '../context/AuthContext';
 
 
 const MonitoringPage = () => {
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [changes, setChanges] = useState([]);
@@ -46,7 +46,9 @@ const MonitoringPage = () => {
     return counts;
   }, [changes]);
 
-  const canCloseOrExtend = ['Admin', 'SuperAdmin'].includes(user?.role);
+  const isAdminRole = ['Admin', 'SuperAdmin'].includes(user?.role);
+  const canMonitor = isAdminRole && hasPermission('changes.monitor');
+  const canClose = isAdminRole && hasPermission('changes.close');
 
   const getDefaultMonitoringPeriod = (changeType) => {
     const normalizedType = String(changeType || '').toLowerCase();
@@ -156,8 +158,8 @@ const MonitoringPage = () => {
   };
 
   const closeChange = async (change) => {
-    if (!canCloseOrExtend) {
-      showError('Only Admin or SuperAdmin can close requests');
+    if (!canClose) {
+      showError('You do not have permission to close requests');
       return;
     }
 
@@ -187,8 +189,8 @@ const MonitoringPage = () => {
   };
 
   const extendMonitoring = async (change) => {
-    if (!canCloseOrExtend) {
-      showError('Only Admin or SuperAdmin can extend monitoring');
+    if (!canMonitor) {
+      showError('You do not have permission to extend monitoring');
       return;
     }
 
@@ -221,6 +223,9 @@ const MonitoringPage = () => {
       <Sidebar isOpen={sidebarOpen} />
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6`}>
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">Monitoring Page</h1>
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+          Monitoring stage owner: <span className="font-semibold">Admin / SuperAdmin</span>. Final close can be done only by <span className="font-semibold">Admin / SuperAdmin</span> after monitoring review.
+        </div>
 
         {loading ? (
           <div className="text-center py-10">Loading...</div>
@@ -298,7 +303,7 @@ const MonitoringPage = () => {
 
 
             {/* Card UI for selected row in a popup modal */}
-            {canCloseOrExtend && selectedChangeId && (() => {
+            {canMonitor && selectedChangeId && (() => {
               const change = changes.find((c) => c.id === selectedChangeId);
               if (!change) return null;
               return (
@@ -327,9 +332,9 @@ const MonitoringPage = () => {
                       type="button"
                       className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
                       onClick={() => closeChange(change)}
-                      disabled={savingId === change.id}
+                      disabled={savingId === change.id || !canClose}
                     >
-                      {savingId === change.id ? 'Saving...' : 'Close Change'}
+                      {savingId === change.id ? 'Saving...' : 'Final Close'}
                     </button>
                     <button
                       type="button"
