@@ -6,6 +6,18 @@ import { roleService } from '../services/api';
 import { showError, showInfo, showSuccess } from '../utils/helpers';
 import { ADMIN_MANDATORY_PERMISSIONS, ALL_PERMISSIONS, PERMISSION_GROUPS, formatPermissionLabel } from '../utils/permissions';
 
+const ROLE_VISIBILITY_MATRIX = [
+  { role: 'User', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Own + same department visibility' },
+  { role: 'ManUser', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Requester-level access' },
+  { role: 'MachineUser', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Requester-level access' },
+  { role: 'MethodUser', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Requester-level access' },
+  { role: 'MaterialUser', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Requester-level access' },
+  { role: 'GeneralUser', own: 'Yes', sameDept: 'Yes', allDept: 'No', stage1: 'No', stage2: 'No', note: 'Requester-level access' },
+  { role: 'Manager', own: 'Yes', sameDept: 'Yes', allDept: 'Yes', stage1: 'Yes', stage2: 'No', note: 'Stage 1 approver' },
+  { role: 'Admin', own: 'Yes', sameDept: 'Yes', allDept: 'Yes', stage1: 'Yes', stage2: 'Yes', note: 'Stage 2 approver' },
+  { role: 'SuperAdmin', own: 'Yes', sameDept: 'Yes', allDept: 'Yes', stage1: 'Yes', stage2: 'Yes', note: 'Full access' },
+];
+
 const PermissionMatrix = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [roles, setRoles] = useState([]);
@@ -316,6 +328,44 @@ const PermissionMatrix = () => {
       <Sidebar isOpen={sidebarOpen} />
 
       <main className={`${sidebarOpen ? 'md:ml-64' : ''} transition-all duration-300 p-6 space-y-6`}>
+        <section className="card overflow-x-auto">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">Role Access Matrix</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                This matrix shows who can see requests and who can approve each stage.
+              </p>
+            </div>
+          </div>
+
+          <table className="table-custom min-w-[900px]">
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Own Request</th>
+                <th>Same Dept</th>
+                <th>All Dept</th>
+                <th>Stage 1</th>
+                <th>Stage 2</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ROLE_VISIBILITY_MATRIX.map((row) => (
+                <tr key={row.role}>
+                  <td className="font-semibold">{row.role}</td>
+                  <td>{row.own}</td>
+                  <td>{row.sameDept}</td>
+                  <td>{row.allDept}</td>
+                  <td>{row.stage1}</td>
+                  <td>{row.stage2}</td>
+                  <td className="text-sm text-gray-600 dark:text-gray-300">{row.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
         <section className="card">
           <div className="flex items-center justify-between gap-3">
             <div>

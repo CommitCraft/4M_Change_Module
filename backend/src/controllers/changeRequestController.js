@@ -249,12 +249,21 @@ export const getChangeRequests = async (req, res) => {
       ];
     }
 
-    if (req.user.role !== 'SuperAdmin' && req.user.department) {
-      where.department = req.user.department;
-    }
+    const canApprove = Array.isArray(req.user.permissions) && req.user.permissions.includes('approvals.approve');
 
-    if (req.user.role === 'User') {
-      where.created_by = req.user.id;
+    if (req.user.role !== 'SuperAdmin') {
+      if (canApprove) {
+        // Approver roles must not be blocked by department-based scoping.
+        // They need to see requests from all departments that are in their workflow stage.
+      } else {
+        const visibilityConditions = [{ created_by: req.user.id }];
+
+        if (req.user.department) {
+          visibilityConditions.push({ department: req.user.department });
+        }
+
+        where[Op.and] = where[Op.and] ? [...where[Op.and], { [Op.or]: visibilityConditions }] : [{ [Op.or]: visibilityConditions }];
+      }
     }
 
     const { rows, count } = await ChangeRequest.findAndCountAll({
@@ -335,8 +344,9 @@ export const updateChangeRequest = async (req, res) => {
 
     // Check if approvals have been recorded - prevent updates after approval started
     const approvalCount = await Approval.count({ where: { request_id: id } });
-    if (approvalCount > 0 && req.user.role === 'User' && request.created_by === req.user.id) {
-      return sendError(res, 403, 'Cannot modify request after approval process has started');
+    const isLockedForEdit = request.status !== 'Rejected' && approvalCount > 0;
+    if (isLockedForEdit) {
+      return sendError(res, 403, 'Cannot modify request until it is rejected');
     }
 
     if (updates.status === 'Implemented' && !['Admin', 'SuperAdmin'].includes(req.user.role)) {

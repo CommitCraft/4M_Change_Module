@@ -17,7 +17,7 @@ const Sidebar = ({ isOpen }) => {
     { path: '/dashboard', label: 'Dashboard', icon: AiFillHome, permission: 'dashboard.view' },
     { path: '/create', label: 'Create Request', icon: FaChartBar, permission: 'changes.create' },
     { path: '/changes', label: 'All Requests', icon: AiFillFile, permission: 'changes.read' },
-    // Removed Pending Reviews and Pending Approvals from sidebar
+    { path: '/approvals', label: 'Pending', icon: AiFillCheckCircle, permission: 'approvals.approve', roles: ['Manager', 'Admin', 'SuperAdmin'] },
     { path: '/implementation', label: 'Implementation', icon: FaTools, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
     { path: '/monitoring', label: 'Monitoring', icon: FaChartLine, permission: 'changes.update', roles: ['Admin', 'SuperAdmin'] },
     // { path: '/reports', label: 'Reports', icon: FaChartBar, permission: 'changes.read' },
@@ -25,6 +25,7 @@ const Sidebar = ({ isOpen }) => {
     { path: '/guided-setup', label: '4M Guided Setup', icon: FaClipboardCheck, permission: 'changes.read' },
     { path: '/users', label: 'Users', icon: FaUsers, permission: 'users.read' },
     { path: '/roles', label: 'Roles', icon: FaUserShield, permission: 'roles.read' },
+    { path: '/roles/permissions', label: 'Role Access Matrix', icon: FaUserShield, permission: 'roles.update' },
   ];
 
   const visibleItems = menuItems.filter((item) => hasPermission(item.permission) && isRoleAllowed(item.roles));

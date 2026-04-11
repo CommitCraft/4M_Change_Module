@@ -6,6 +6,7 @@ import FormInput from '../components/FormInput';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { FOUR_M_TYPES, getSubCategoriesByType } from '../utils/changeCategories';
+import { useAuth } from '../context/AuthContext';
 
 const IMPACT_LEVELS = ['Low', 'Medium', 'High'];
 
@@ -40,8 +41,31 @@ const STEP_GUIDE = [
   },
 ];
 
+const normalizeDepartmentName = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/department|dept|\//g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const isSameDepartment = (departmentName, userDepartmentName) => {
+  if (!departmentName || !userDepartmentName) return false;
+
+  const normalizedDepartment = normalizeDepartmentName(departmentName);
+  const normalizedUserDepartment = normalizeDepartmentName(userDepartmentName);
+
+  if (normalizedDepartment === normalizedUserDepartment) return true;
+
+  return (
+    normalizedDepartment.includes(normalizedUserDepartment) ||
+    normalizedUserDepartment.includes(normalizedDepartment)
+  );
+};
+
 
 const CreateChange = () => {
+  const { user: currentUser } = useAuth();
   const generatedRequestNo = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -112,6 +136,18 @@ const CreateChange = () => {
     if (names.length > 0) return names;
     return formData.type === 'Man' ? operatorOptions : [];
   }, [businessRolesByType, formData.type, operatorOptions]);
+
+  const visibleDepartments = useMemo(() => {
+    if (!Array.isArray(departmentOptions)) return [];
+    if (currentUser?.role === 'SuperAdmin') return departmentOptions;
+
+    const userDepartmentName = currentUser?.department || '';
+    const scopedDepartments = departmentOptions.filter((department) =>
+      isSameDepartment(department.name || department, userDepartmentName)
+    );
+
+    return scopedDepartments.length > 0 ? scopedDepartments : departmentOptions;
+  }, [currentUser?.department, currentUser?.role, departmentOptions]);
 
 
   // Load masters and risk levels
@@ -216,6 +252,21 @@ const CreateChange = () => {
       // Keep fallback options when master API is unavailable.
     }
   }, []);
+
+  useEffect(() => {
+    if (currentUser?.role === 'SuperAdmin') return;
+
+    const matchedDepartment = visibleDepartments.find((department) =>
+      isSameDepartment(department.name || department, currentUser?.department || '')
+    );
+
+    if (matchedDepartment?.name && formData.department !== matchedDepartment.name) {
+      setFormData((prev) => ({
+        ...prev,
+        department: matchedDepartment.name,
+      }));
+    }
+  }, [currentUser?.department, currentUser?.role, visibleDepartments, formData.department]);
 
   useEffect(() => {
     const savedDraft = localStorage.getItem('change_request_draft');
@@ -420,9 +471,16 @@ const CreateChange = () => {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department <span className="text-red-500">*</span></label>
-                <select name="department" value={formData.department} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600" required>
+                <select
+                  name="department"
+                  value={formData.department}
+                  onChange={handleChange}
+                  className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600"
+                  required
+                  disabled={currentUser?.role !== 'SuperAdmin'}
+                >
                   <option value="">Select department</option>
-                  {departmentOptions.map((item) => (
+                  {visibleDepartments.map((item) => (
                     <option key={item.id || item.name} value={item.name}>
                       {item.name}
                       {item.four_m_link ? ` (${item.four_m_link})` : ''}

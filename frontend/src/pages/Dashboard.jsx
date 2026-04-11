@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changeRequestService } from '../services/api';
+import { changeRequestService, departmentService } from '../services/api';
 import { formatDate, showError, showSuccess } from '../utils/helpers';
 import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, BarElement } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
@@ -11,6 +11,28 @@ import { useAuth } from '../context/AuthContext';
 import {
   canUserApprove as canUserApproveHelper,
 } from '../utils/approvalWorkflow';
+
+const normalizeDepartmentName = (value = '') =>
+  String(value)
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/department|dept|\//g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const isSameDepartment = (departmentName, userDepartmentName) => {
+  if (!departmentName || !userDepartmentName) return false;
+
+  const normalizedDepartment = normalizeDepartmentName(departmentName);
+  const normalizedUserDepartment = normalizeDepartmentName(userDepartmentName);
+
+  if (normalizedDepartment === normalizedUserDepartment) return true;
+
+  return (
+    normalizedDepartment.includes(normalizedUserDepartment) ||
+    normalizedUserDepartment.includes(normalizedDepartment)
+  );
+};
 
 ChartJS.register(ArcElement, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend);
 
@@ -25,6 +47,7 @@ const Dashboard = () => {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
   const [editForm, setEditForm] = useState({
     title: '',
     department: '',
@@ -40,9 +63,43 @@ const Dashboard = () => {
     return canUserApproveHelper(change, user, currentUserId);
   };
 
+  const canEditChange = (change) => {
+    if (!hasPermission('changes.update') || !change) return false;
+
+    const approvalCount = Number(change.approval_stage_count ?? change.approvals?.length ?? 0);
+    if (change.status === 'Rejected') return true;
+
+    return approvalCount === 0 && change.status === 'Pending';
+  };
+
   useEffect(() => {
     fetchStats();
   }, []);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await departmentService.getAll({ status: 'Active' });
+        setDepartmentOptions(response?.data?.data || []);
+      } catch (error) {
+        showError(error?.response?.data?.message || 'Failed to fetch departments');
+        setDepartmentOptions([]);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+  const visibleDepartments = useMemo(() => {
+    if (user?.role === 'SuperAdmin') return departmentOptions;
+
+    const userDepartmentName = user?.department || '';
+    const scopedDepartments = departmentOptions.filter((department) =>
+      isSameDepartment(department.name, userDepartmentName)
+    );
+
+    return scopedDepartments.length > 0 ? scopedDepartments : departmentOptions;
+  }, [departmentOptions, user?.department, user?.role]);
 
   const fetchStats = async () => {
     try {
@@ -101,9 +158,12 @@ const Dashboard = () => {
 
   const openEditModal = (change) => {
     setSelectedChange(change);
+    const matchedDepartment = visibleDepartments.find((department) =>
+      isSameDepartment(department.name, change.department || '')
+    );
     setEditForm({
       title: change.title || '',
-      department: change.department || '',
+      department: matchedDepartment?.name || change.department || '',
       risk_level: change.risk_level || 'Low',
       status: change.status || 'Pending',
     });
@@ -304,7 +364,7 @@ const Dashboard = () => {
                           >
                             View
                           </button>
-                          {hasPermission('changes.update') && (
+                          {canEditChange(recentChanges.find((c) => c.id === item.id)) && (
                             <button
                               type="button"
                               onClick={() => openEditModal(recentChanges.find((c) => c.id === item.id))}
@@ -370,12 +430,20 @@ const Dashboard = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
-              <input
-                type="text"
+              <select
                 value={editForm.department}
                 onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
                 className="input-field dark:bg-gray-800 dark:text-gray-200"
-              />
+                disabled={user?.role !== 'SuperAdmin'}
+              >
+                <option value="">Select Department</option>
+                {visibleDepartments.map((department) => (
+                  <option key={department.id} value={department.name}>
+                    {department.name}
+                    {department.four_m_link ? ` (${department.four_m_link})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

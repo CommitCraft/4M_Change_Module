@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { changeRequestService } from '../services/api';
+import { changeRequestService, departmentService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { showError } from '../utils/helpers';
+import { showError, showSuccess } from '../utils/helpers';
 import { formatDate } from '../utils/helpers';
 import Modal from '../components/Modal';
 import Navbar from '../components/Navbar';
@@ -20,6 +20,15 @@ const ChangeList = () => {
   const [loading, setLoading] = useState(true);
   const [selectedChange, setSelectedChange] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [departmentOptions, setDepartmentOptions] = useState([]);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    department: '',
+    risk_level: 'Low',
+    status: 'Pending',
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [filters, setFilters] = useState({
     type: '',
@@ -42,6 +51,62 @@ const ChangeList = () => {
     if (!change || change.status !== 'Pending') return false;
     return canUserApproveHelper(change, user, currentUserId);
   };
+
+  const canEditChange = (change) => {
+    if (!hasPermission('changes.update') || !change) return false;
+
+    const approvalCount = Number(change.approval_stage_count ?? change.approvals?.length ?? 0);
+    if (change.status === 'Rejected') return true;
+
+    return approvalCount === 0 && change.status === 'Pending';
+  };
+
+  const normalizeDepartmentName = (value = '') =>
+    String(value)
+      .toLowerCase()
+      .replace(/\(.*?\)/g, '')
+      .replace(/department|dept|\//g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const isSameDepartment = (departmentName, userDepartmentName) => {
+    if (!departmentName || !userDepartmentName) return false;
+
+    const normalizedDepartment = normalizeDepartmentName(departmentName);
+    const normalizedUserDepartment = normalizeDepartmentName(userDepartmentName);
+
+    if (normalizedDepartment === normalizedUserDepartment) return true;
+
+    return (
+      normalizedDepartment.includes(normalizedUserDepartment) ||
+      normalizedUserDepartment.includes(normalizedDepartment)
+    );
+  };
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await departmentService.getAll({ status: 'Active' });
+        setDepartmentOptions(response?.data?.data || []);
+      } catch (error) {
+        showError(error?.response?.data?.message || 'Failed to fetch departments');
+        setDepartmentOptions([]);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
+  const visibleDepartments = useMemo(() => {
+    if (user?.role === 'SuperAdmin') return departmentOptions;
+
+    const userDepartmentName = user?.department || '';
+    const scopedDepartments = departmentOptions.filter((department) =>
+      isSameDepartment(department.name, userDepartmentName)
+    );
+
+    return scopedDepartments.length > 0 ? scopedDepartments : departmentOptions;
+  }, [departmentOptions, user?.department, user?.role]);
 
   useEffect(() => {
     fetchChanges();
@@ -94,8 +159,38 @@ const ChangeList = () => {
   };
 
   const handleEdit = (change) => {
+    if (!canEditChange(change)) {
+      showError('This request cannot be edited until it is rejected');
+      return;
+    }
+    const matchedDepartment = visibleDepartments.find((department) =>
+      isSameDepartment(department.name, change.department || '')
+    );
+
     setSelectedChange(change);
-    setModalOpen(true);
+    setEditForm({
+      title: change.title || '',
+      department: matchedDepartment?.name || change.department || '',
+      risk_level: change.risk_level || 'Low',
+      status: change.status || 'Pending',
+    });
+    setEditModalOpen(true);
+  };
+
+  const submitEdit = async () => {
+    if (!selectedChange) return;
+
+    try {
+      setEditLoading(true);
+      await changeRequestService.updateChangeRequest(selectedChange.id, editForm);
+      showSuccess('Change request updated successfully');
+      setEditModalOpen(false);
+      fetchChanges();
+    } catch (error) {
+      showError(error?.response?.data?.message || 'Failed to update change request');
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const getRiskBadgeColor = (level) => {
@@ -302,7 +397,7 @@ const ChangeList = () => {
                         <td>
                           <div className="flex flex-wrap gap-2">
                             <button type="button" onClick={() => handleView(change)} className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">View</button>
-                            {hasPermission('changes.update') && (
+                            {canEditChange(change) && (
                               <button type="button" onClick={() => handleEdit(change)} className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700">Edit</button>
                             )}
                             {canCurrentUserApprove(change) && (
@@ -414,6 +509,73 @@ const ChangeList = () => {
               )}
             </div>
           )}
+        </Modal>
+
+        <Modal isOpen={editModalOpen} title="Edit Change Request" onClose={() => setEditModalOpen(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Title</label>
+              <input
+                type="text"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="input-field dark:bg-gray-800 dark:text-gray-200"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Department</label>
+              <select
+                value={editForm.department}
+                onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                className="input-field dark:bg-gray-800 dark:text-gray-200"
+                disabled={user?.role !== 'SuperAdmin'}
+              >
+                <option value="">Select Department</option>
+                {visibleDepartments.map((department) => (
+                  <option key={department.id} value={department.name}>
+                    {department.name}
+                    {department.four_m_link ? ` (${department.four_m_link})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Risk</label>
+                <select
+                  value={editForm.risk_level}
+                  onChange={(e) => setEditForm({ ...editForm, risk_level: e.target.value })}
+                  className="input-field dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="input-field dark:bg-gray-800 dark:text-gray-200"
+                >
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Implemented">Implemented</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={submitEdit} disabled={editLoading} className="btn-primary flex-1 disabled:opacity-50">
+                {editLoading ? 'Saving...' : 'Save'}
+              </button>
+              <button type="button" onClick={() => setEditModalOpen(false)} className="btn-secondary flex-1">
+                Cancel
+              </button>
+            </div>
+          </div>
         </Modal>
       </main>
     </div>
