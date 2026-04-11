@@ -80,6 +80,13 @@ const Approvals = () => {
     setDetailsOpen(true);
   };
 
+  const openActionFromDetails = (change, status) => {
+    setSelectedChange(change);
+    setApprovalData({ status, remarks: '' });
+    setDetailsOpen(false);
+    setModalOpen(true);
+  };
+
   const renderField = (label, value) => (
     <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white/70 dark:bg-gray-900/40">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">{label}</p>
@@ -128,164 +135,66 @@ const Approvals = () => {
         {loading ? (
           <div className="text-center py-10">Loading...</div>
         ) : (
-          <div className="space-y-4">
+          <div className="overflow-x-auto card">
             {changes.length === 0 ? (
-              <div className="card text-center py-10 text-gray-500">No pending approvals for your role</div>
+              <div className="text-center py-10 text-gray-500">No pending approvals for your role</div>
             ) : (
-              changes.map((change) => {
-                const currentStep = getApprovalStep(change);
-                const progress = getApprovalProgress(change);
-                const { approvedCount, workflowSteps } = progress;
-                const myReview = getMyReview(change);
-                const isReviewed = Boolean(myReview);
-                
-                return (
-                  <div key={change.id} className="card">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">{change.title}</h3>
-                            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-200">
-                              CR-{String(change.id).padStart(4, '0')}
-                            </span>
-                            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                              {getWorkflowStatusLabel(change)}
-                            </span>
+              <table className="table-custom">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-800">
+                    <th className="dark:text-gray-200">Request No</th>
+                    <th className="dark:text-gray-200">Date</th>
+                    <th className="dark:text-gray-200">Department</th>
+                    <th className="dark:text-gray-200">Type</th>
+                    <th className="dark:text-gray-200">Title</th>
+                    <th className="dark:text-gray-200">Assigned Role</th>
+                    <th className="dark:text-gray-200">Status</th>
+                    <th className="dark:text-gray-200">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {changes.map((change) => {
+                    const myReview = getMyReview(change);
+                    const isReviewed = Boolean(myReview);
+
+                    return (
+                      <tr key={change.id} className="dark:border-gray-700">
+                        <td className="dark:text-gray-300">CR-{String(change.id).padStart(4, '0')}</td>
+                        <td className="dark:text-gray-300">{formatDate(change.created_at)}</td>
+                        <td className="dark:text-gray-300">{change.department || '-'}</td>
+                        <td className="dark:text-gray-300">{change.type || '-'}</td>
+                        <td className="dark:text-gray-300">{change.title || '-'}</td>
+                        <td className="dark:text-gray-300">{getAssignedRoleLabel(change)}</td>
+                        <td className="dark:text-gray-300">
+                          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                            {getWorkflowStatusLabel(change)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openDetails(change)}
+                              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                            >
+                              View
+                            </button>
+                            {hasPermission('approvals.approve') && canUserApprove(change) && !isReviewed && (
+                              <button
+                                type="button"
+                                onClick={() => handleApprove(change)}
+                                className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                              >
+                                Approve
+                              </button>
+                            )}
                           </div>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {change.type} | {change.department || '-'} | {change.machine || change.machine_name || '-'}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                            Requested by {change.creator?.name || 'Unknown'} on {formatDate(change.created_at)}
-                          </p>
-                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                            Assigned To Role: {getAssignedRoleLabel(change)}
-                          </p>
-                          {isReviewed && (
-                            <p className={`text-sm mt-1 font-semibold ${myReview.status === 'Approved' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300'}`}>
-                              {myReview.status === 'Approved' ? 'Reviewed by you: Approved ✓' : 'Reviewed by you: Rejected ✗'}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          {renderField('Description', change.description)}
-                          {renderField('Risk Level', change.risk_level)}
-                          {renderField('Current State', change.current_state || change.old_value)}
-                          {renderField('Proposed Change', change.proposed_change || change.new_value)}
-                        </div>
-
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          {renderField('Production Line', change.production_line)}
-                          {renderField('Current Operator', change.current_operator)}
-                          {renderField('Proposed Operator', change.proposed_operator)}
-                          {renderField('Reason', change.reason)}
-                        </div>
-
-                        {change.type === 'Man' && (
-                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                            {renderField('Required Skills', change.required_skills)}
-                            {renderField('Skill Status', change.proposed_operator_skill_status)}
-                            {renderYesNo('Training Required', change.training_required)}
-                            {renderField('Training Status', change.training_status)}
-                            {renderField('Training Notes', change.training_notes)}
-                          </div>
-                        )}
-
-                        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                          {renderField('Compliance Requirements', change.compliance_requirements)}
-                          {renderYesNo('Action Plan Required', change.action_plan_required)}
-                          {renderField('Action Plan Notes', change.action_plan_notes)}
-                          {renderField('Request Date', formatDate(change.request_date || change.created_at))}
-                        </div>
-                        
-                        {/* Approval Progress */}
-                        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/70">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
-                              Approval Progress
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {progress.approvedCount}/{workflowSteps.length} steps completed
-                            </p>
-                          </div>
-                          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-                            <div
-                              className="h-full rounded-full bg-blue-600 transition-all duration-300"
-                              style={{ width: `${progress.percent}%` }}
-                            />
-                          </div>
-                          <div className="mt-3 space-y-2">
-                            {workflowSteps.map((step, idx) => {
-                              const isCompleted = idx < approvedCount;
-                              const isCurrent = idx === approvedCount && !progress.isComplete;
-                              const stepStatus = isCompleted ? 'Completed' : isCurrent ? 'Current' : 'Pending';
-
-                              return (
-                                <div key={step.step} className="flex items-center gap-3 text-xs">
-                                  <span className={`flex h-6 w-6 items-center justify-center rounded-full font-bold ${isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-200'}`}>
-                                    {isCompleted ? '✓' : idx + 1}
-                                  </span>
-                                  <span className={`flex-1 text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
-                                    {step.name}
-                                    {isCurrent ? ' (Current)' : ''}
-                                    {progress.isComplete && idx === workflowSteps.length - 1 ? ' (Completed)' : ''}
-                                  </span>
-                                  <span
-                                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                      stepStatus === 'Completed'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-                                        : stepStatus === 'Current'
-                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                                    }`}
-                                  >
-                                    {stepStatus}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openDetails(change)}
-                            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-                          >
-                            View Full Details
-                          </button>
-                        </div>
-                      </div>
-                      {hasPermission('approvals.approve') && (
-                        <button
-                          onClick={() => handleApprove(change)}
-                          disabled={!canUserApprove(change) || isReviewed}
-                          className={`ml-4 px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-                            isReviewed
-                              ? myReview.status === 'Approved'
-                                ? 'bg-green-600 text-white cursor-not-allowed'
-                                : 'bg-red-600 text-white cursor-not-allowed'
-                              : canUserApprove(change)
-                              ? 'btn-primary'
-                              : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                          }`}
-                        >
-                          {isReviewed
-                            ? myReview.status === 'Approved'
-                              ? 'Reviewed ✓'
-                              : 'Reviewed ✗'
-                            : canUserApprove(change)
-                            ? 'Review & Approve'
-                            : 'Not Your Step'}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         )}
@@ -316,6 +225,27 @@ const Approvals = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2 justify-end">
+                {hasPermission('approvals.approve') && canUserApprove(detailsChange) && !getMyReview(detailsChange) && (
+                  <button
+                    type="button"
+                    onClick={() => openActionFromDetails(detailsChange, 'Approved')}
+                    className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                  >
+                    Approve
+                  </button>
+                )}
+                {hasPermission('approvals.approve') && canUserApprove(detailsChange) && !getMyReview(detailsChange) && (
+                  <button
+                    type="button"
+                    onClick={() => openActionFromDetails(detailsChange, 'Rejected')}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700"
+                  >
+                    Reject
+                  </button>
+                )}
               </div>
 
               <div className="grid gap-6 lg:grid-cols-2">
