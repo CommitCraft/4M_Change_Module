@@ -60,7 +60,9 @@ export const canUserApprove = (change, user, currentUserId) => {
 export const getApprovalProgress = (change) => {
   if (!change) return null;
   const workflowSteps = getWorkflowSteps(change);
-  const approvedCount = change.approvals?.filter((approval) => approval.status === 'Approved').length || 0;
+  const approvedCount = typeof change.approval_stage_count === 'number'
+    ? change.approval_stage_count
+    : change.approvals?.filter((approval) => approval.status === 'Approved').length || 0;
   const currentIndex = workflowSteps.length === 0 ? -1 : Math.min(approvedCount, workflowSteps.length - 1);
   const currentStep = currentIndex >= 0 ? workflowSteps[currentIndex] : null;
 
@@ -81,4 +83,23 @@ export const getAssignedRoleLabel = (change) => {
   if (!progress || progress.isComplete || !progress.currentStep) return 'Completed';
   const roles = progress.currentStep.allowedRoles || [];
   return roles.length > 0 ? roles.join(' / ') : progress.currentStep.minRole;
+};
+
+/**
+ * Get a human-friendly status label for display in lists and detail views.
+ */
+export const getWorkflowStatusLabel = (change) => {
+  if (!change) return '-';
+  const progress = getApprovalProgress(change);
+  if (!progress) return change.status || '-';
+  if (change.status === 'Rejected') return 'Rejected';
+  if (change.status === 'Implemented') return 'Implemented';
+  if (change.status === 'Closed') return 'Closed';
+  if (progress.isComplete) return 'Approved';
+
+  if (progress.approvedCount === 0) {
+    return 'Awaiting Stage 1 Approval';
+  }
+
+  return `Awaiting Stage ${Math.min(progress.approvedCount + 1, progress.workflowSteps.length)} Approval`;
 };

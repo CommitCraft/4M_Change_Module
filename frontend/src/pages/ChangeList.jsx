@@ -9,6 +9,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import {
   canUserApprove as canUserApproveHelper,
+  getWorkflowStatusLabel,
 } from '../utils/approvalWorkflow';
 
 const ChangeList = () => {
@@ -124,6 +125,8 @@ const ChangeList = () => {
         return '';
     }
   };
+
+  const getDisplayStatus = (change) => getWorkflowStatusLabel(change);
 
   const filteredChanges = changes.filter((change) => {
     const createdDate = new Date(change.created_at);
@@ -294,7 +297,7 @@ const ChangeList = () => {
                         <td className="dark:text-gray-300">{change.machine || '-'}</td>
                         <td className="dark:text-gray-300">{change.type}</td>
                         <td className="dark:text-gray-300">{change.title}</td>
-                        <td><span className={`badge ${getStatusBadgeColor(change.status)}`}>{change.status}</span></td>
+                        <td><span className={`badge ${getStatusBadgeColor(change.status)}`}>{getDisplayStatus(change)}</span></td>
                         <td className="dark:text-gray-300">{change.creator?.name || '-'}</td>
                         <td>
                           <div className="flex flex-wrap gap-2">
@@ -358,7 +361,7 @@ const ChangeList = () => {
               <div>
                 <p className="text-sm text-gray-600 dark:text-gray-400">Status</p>
                 <span className={`badge ${getStatusBadgeColor(selectedChange.status)}`}>
-                  {selectedChange.status}
+                  {getDisplayStatus(selectedChange)}
                 </span>
               </div>
               <div>

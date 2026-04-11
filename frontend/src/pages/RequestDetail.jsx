@@ -4,7 +4,7 @@ import { changeRequestService, fileService } from '../services/api';
 import { formatDate, showError } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { getAssignedRoleLabel } from '../utils/approvalWorkflow';
+import { getAssignedRoleLabel, getWorkflowStatusLabel } from '../utils/approvalWorkflow';
 
 const timelineSteps = [
   { key: 'created', label: 'Request Created' },
@@ -90,14 +90,16 @@ const RequestDetail = () => {
     closed: request.status === 'Closed',
   };
 
+  const displayStatus = getWorkflowStatusLabel(request);
+
   const statusBadgeClass =
-    request.status === 'Approved'
+    displayStatus === 'Approved'
       ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-      : request.status === 'Rejected'
+      : displayStatus === 'Rejected'
       ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200'
-      : request.status === 'Implemented'
+      : displayStatus === 'Implemented'
       ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
-      : request.status === 'Closed'
+      : displayStatus === 'Closed'
       ? 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
       : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200';
 
@@ -126,7 +128,7 @@ const RequestDetail = () => {
               <p><span className="font-semibold">Date:</span> {formatDate(request.request_date || request.created_at)}</p>
               <p>
                 <span className="font-semibold">Current Status:</span>{' '}
-                <span className={`px-2 py-1 rounded text-xs font-semibold ${statusBadgeClass}`}>{request.status}</span>
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${statusBadgeClass}`}>{displayStatus}</span>
               </p>
             </div>
           </div>
@@ -191,6 +193,7 @@ const RequestDetail = () => {
           <div className="card">
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Section 6 - Approval Timeline</h2>
             <p className="mb-3 text-sm text-blue-700 dark:text-blue-300">Assigned To Role: {getAssignedRoleLabel(request)}</p>
+            <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Current Stage: {getWorkflowStatusLabel(request)}</p>
             <div className="space-y-2 text-sm">
               {timelineSteps.map((step, index) => {
                 const isCompleted = completedStages[step.key];

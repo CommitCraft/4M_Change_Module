@@ -3,7 +3,7 @@ import sequelize, { connectDatabase } from './database.js';
 import models from '../models/index.js';
 import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
 
-const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData } = models;
+const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData, Department } = models;
 
 const ALL_ROLES = ['SuperAdmin', 'Admin', 'Manager', 'User'];
 
@@ -152,11 +152,15 @@ export const seedDemoDataIfNeeded = async () => {
   const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true';
   if (!shouldSeedDemo) return;
 
+  const qualityDept = await Department.findOne({ where: { name: 'Quality' } });
+  const productionDept = await Department.findOne({ where: { name: 'Production' } });
+  const maintenanceDept = await Department.findOne({ where: { name: 'Maintenance' } });
+
   const adminRole = await Role.findOne({ where: { name: 'Admin' } });
   const managerRole = await Role.findOne({ where: { name: 'Manager' } });
   const userRole = await Role.findOne({ where: { name: 'User' } });
 
-  const [[adminUser]] = await Promise.all([
+  const [adminUser] = await Promise.all([
     User.scope('withPassword').findOrCreate({
       where: { email: 'admin@example.com' },
       defaults: {
@@ -164,27 +168,54 @@ export const seedDemoDataIfNeeded = async () => {
         email: 'admin@example.com',
         password: 'Password@123',
         role_id: adminRole.id,
-      },
-    }),
-    User.scope('withPassword').findOrCreate({
-      where: { email: 'manager@example.com' },
-      defaults: {
-        name: 'Line Manager',
-        email: 'manager@example.com',
-        password: 'Password@123',
-        role_id: managerRole.id,
-      },
-    }),
-    User.scope('withPassword').findOrCreate({
-      where: { email: 'user@example.com' },
-      defaults: {
-        name: 'Operator User',
-        email: 'user@example.com',
-        password: 'Password@123',
-        role_id: userRole.id,
+        department_id: qualityDept?.id || null,
       },
     }),
   ]);
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'manager@example.com' },
+    defaults: {
+      name: 'Line Manager',
+      email: 'manager@example.com',
+      password: 'Password@123',
+      role_id: managerRole.id,
+      department_id: productionDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'user@example.com' },
+    defaults: {
+      name: 'Operator User',
+      email: 'user@example.com',
+      password: 'Password@123',
+      role_id: userRole.id,
+      department_id: maintenanceDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'quality.approver@example.com' },
+    defaults: {
+      name: 'Quality Approver',
+      email: 'quality.approver@example.com',
+      password: 'Password@123',
+      role_id: adminRole.id,
+      department_id: qualityDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'manager.approver@example.com' },
+    defaults: {
+      name: 'Manager Approver',
+      email: 'manager.approver@example.com',
+      password: 'Password@123',
+      role_id: managerRole.id,
+      department_id: productionDept?.id || null,
+    },
+  });
 
   const [sampleRequest] = await ChangeRequest.findOrCreate({
     where: { title: 'Conveyor Motor Upgrade' },

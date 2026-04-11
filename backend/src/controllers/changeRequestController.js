@@ -3,6 +3,55 @@ import models from '../models/index.js';
 const { ChangeRequest, Approval, AuditLog, Attachment, User, Role, MasterData } = models;
 import { sendResponse, sendError } from '../utils/response.js';
 
+const WORKFLOW_STEPS = [
+  { step: 1, name: 'Supervisor Review', minRole: 'Manager', allowedRoles: ['Manager'] },
+  { step: 2, name: 'Quality Approval', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
+];
+
+const getApprovalWorkflowMeta = (request) => {
+  const approvals = request?.approvals || [];
+  const approvedCount = approvals.filter((approval) => approval.status === 'Approved').length;
+  const currentStep = WORKFLOW_STEPS[Math.min(approvedCount, WORKFLOW_STEPS.length - 1)] || null;
+  const isComplete = approvedCount >= WORKFLOW_STEPS.length;
+  const requesterRole = request?.creator?.Role?.name || null;
+  const assignedRoles = currentStep?.allowedRoles || [];
+
+  let workflowStatusLabel = request?.status || 'Pending';
+  if (request?.status === 'Rejected') {
+    workflowStatusLabel = 'Rejected';
+  } else if (request?.status === 'Implemented') {
+    workflowStatusLabel = 'Implemented';
+  } else if (request?.status === 'Closed') {
+    workflowStatusLabel = 'Closed';
+  } else if (isComplete || request?.status === 'Approved') {
+    workflowStatusLabel = 'Approved';
+  } else if (approvedCount === 0) {
+    workflowStatusLabel = 'Awaiting Stage 1 Approval';
+  } else {
+    workflowStatusLabel = `Awaiting Stage ${Math.min(approvedCount + 1, WORKFLOW_STEPS.length)} Approval`;
+  }
+
+  return {
+    current_stage: currentStep?.name || (isComplete ? 'Completed' : 'Pending'),
+    current_stage_step: currentStep?.step || null,
+    current_stage_role: assignedRoles.join(' / ') || currentStep?.minRole || null,
+    approval_stage_count: approvedCount,
+    approval_stage_total: WORKFLOW_STEPS.length,
+    workflow_status_label: workflowStatusLabel,
+    workflow_is_complete: isComplete,
+    requester_role: requesterRole,
+  };
+};
+
+const attachWorkflowMeta = (request) => {
+  if (!request) return request;
+  const plainRequest = typeof request.toJSON === 'function' ? request.toJSON() : { ...request };
+  return {
+    ...plainRequest,
+    ...getApprovalWorkflowMeta(plainRequest),
+  };
+};
+
 const resolveManSkillAssessment = async (payload, existingRequest = null) => {
   const type = payload.type || existingRequest?.type;
   if (type !== 'Man') return {};
@@ -164,7 +213,7 @@ export const createChangeRequest = async (req, res) => {
       user_id: req.user.id,
     });
 
-    sendResponse(res, 201, 'Change request created successfully', request);
+    sendResponse(res, 201, 'Change request created successfully', attachWorkflowMeta(request));
   } catch (error) {
     sendError(res, 500, 'Error creating change request', error.message);
   }
@@ -220,7 +269,7 @@ export const getChangeRequests = async (req, res) => {
     });
 
     sendResponse(res, 200, 'Change requests fetched', {
-      rows,
+      rows: rows.map((row) => attachWorkflowMeta(row)),
       total: count,
       page: Number(page),
       limit: Number(limit),
@@ -260,7 +309,7 @@ export const getChangeRequestById = async (req, res) => {
       return sendError(res, 403, 'You are not authorized to view this request');
     }
 
-    sendResponse(res, 200, 'Change request fetched', request);
+    sendResponse(res, 200, 'Change request fetched', attachWorkflowMeta(request));
   } catch (error) {
     sendError(res, 500, 'Error fetching change request', error.message);
   }

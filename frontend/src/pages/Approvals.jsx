@@ -12,6 +12,7 @@ import {
   canUserApprove as canUserApproveHelper,
   getApprovalProgress as getApprovalProgressHelper,
   getAssignedRoleLabel,
+  getWorkflowStatusLabel,
 } from '../utils/approvalWorkflow';
 
 const Approvals = () => {
@@ -140,7 +141,7 @@ const Approvals = () => {
                               CR-{String(change.id).padStart(4, '0')}
                             </span>
                             <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                              {change.status || 'Pending'}
+                              {getWorkflowStatusLabel(change)}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
@@ -275,7 +276,7 @@ const Approvals = () => {
                       CR-{String(detailsChange.id).padStart(4, '0')}
                     </span>
                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-700 shadow-sm dark:bg-gray-900 dark:text-gray-200">
-                      {detailsChange.status || 'Pending'}
+                      {getWorkflowStatusLabel(detailsChange)}
                     </span>
                   </div>
                 </div>
@@ -336,8 +337,9 @@ const Approvals = () => {
                       </div>
                       <div className="text-right text-sm text-gray-600 dark:text-gray-300">
                         <p className="font-semibold text-gray-800 dark:text-gray-100">
-                          Current Step: {detailsProgress.currentStep?.name || (detailsProgress.isComplete ? 'Completed' : 'Pending')}
+                          Current Stage: {getWorkflowStatusLabel(detailsChange)}
                         </p>
+                        <p>Next Step: {detailsProgress.currentStep?.name || (detailsProgress.isComplete ? 'Completed' : 'Pending')}</p>
                         <p>Visible steps: {detailsProgress.workflowSteps.length}</p>
                         <p>Assigned To Role: {getAssignedRoleLabel(detailsChange)}</p>
                       </div>

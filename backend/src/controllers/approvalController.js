@@ -7,6 +7,36 @@ const APPROVAL_STEPS = [
   { step: 2, name: 'Quality Approval', minRole: 'Admin', allowedRoles: ['Admin', 'SuperAdmin'] },
 ];
 
+const getWorkflowMeta = (request, approvals) => {
+  const approvedCount = approvals.filter((approval) => approval.status === 'Approved').length;
+  const currentStep = APPROVAL_STEPS[Math.min(approvedCount, APPROVAL_STEPS.length - 1)] || null;
+  const isComplete = approvedCount >= APPROVAL_STEPS.length;
+
+  let workflowStatusLabel = request.status || 'Pending';
+  if (request.status === 'Rejected') {
+    workflowStatusLabel = 'Rejected';
+  } else if (request.status === 'Implemented') {
+    workflowStatusLabel = 'Implemented';
+  } else if (request.status === 'Closed') {
+    workflowStatusLabel = 'Closed';
+  } else if (isComplete || request.status === 'Approved') {
+    workflowStatusLabel = 'Approved';
+  } else if (approvedCount === 0) {
+    workflowStatusLabel = 'Awaiting Stage 1 Approval';
+  } else {
+    workflowStatusLabel = `Awaiting Stage ${Math.min(approvedCount + 1, APPROVAL_STEPS.length)} Approval`;
+  }
+
+  return {
+    current_stage: currentStep?.name || (isComplete ? 'Completed' : 'Pending'),
+    current_stage_role: currentStep?.allowedRoles?.join(' / ') || currentStep?.minRole || null,
+    approval_stage_count: approvedCount,
+    approval_stage_total: APPROVAL_STEPS.length,
+    workflow_status_label: workflowStatusLabel,
+    workflow_is_complete: isComplete,
+  };
+};
+
 export const approveRequest = async (req, res) => {
   try {
     const { request_id, status, remarks } = req.body;
@@ -87,7 +117,15 @@ export const approveRequest = async (req, res) => {
       return request;
     });
 
-    sendResponse(res, 200, 'Approval recorded successfully', result);
+    const approvals = await Approval.findAll({
+      where: { request_id: result.id },
+      order: [['approved_at', 'ASC']],
+    });
+
+    sendResponse(res, 200, 'Approval recorded successfully', {
+      ...(typeof result.toJSON === 'function' ? result.toJSON() : result),
+      ...getWorkflowMeta(result, approvals),
+    });
   } catch (error) {
     sendError(res, 400, error.message || 'Failed to approve request');
   }
