@@ -64,8 +64,28 @@ export const approveRequest = async (req, res) => {
       const approvedCount = approvals.filter((a) => a.status === 'Approved').length;
       const step = workflowSteps[Math.min(approvedCount, workflowSteps.length - 1)];
 
+      // STRICT SEQUENTIAL ENFORCEMENT: Check that all previous steps are approved
+      for (let i = 0; i < step.step - 1; i++) {
+        const previousStep = workflowSteps[i];
+        const previousStepApprovals = approvals.filter((a) => 
+          a.status === 'Approved' && 
+          a.step_number === previousStep.step
+        );
+        
+        if (previousStepApprovals.length === 0) {
+          throw new Error(
+            `Cannot proceed to ${step.name} (Step ${step.step}). ` +
+            `Step ${previousStep.step} (${previousStep.name}) must be completed first.`
+          );
+        }
+      }
+
       if (!step.allowedRoles.includes(req.user.role)) {
-        throw new Error(`Current step is ${step.name}. Your role cannot approve at this stage.`);
+        throw new Error(
+          `Current step is ${step.name} (Step ${step.step}). ` +
+          `Your role (${req.user.role}) cannot approve at this stage. ` +
+          `Required roles: ${step.allowedRoles.join(' or ')}`
+        );
       }
 
       const existingApproval = approvals.find((a) => a.approver_id === req.user.id);
@@ -93,6 +113,7 @@ export const approveRequest = async (req, res) => {
           approver_id: req.user.id,
           status,
           remarks,
+          step_number: step.step,
         },
         { transaction }
       );

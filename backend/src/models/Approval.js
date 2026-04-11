@@ -23,6 +23,11 @@ Approval.init(
       allowNull: false,
       defaultValue: 'Pending',
     },
+    step_number: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Workflow step number (1, 2, etc.) for sequential tracking',
+    },
     remarks: {
       type: DataTypes.TEXT,
       allowNull: true,

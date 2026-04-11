@@ -147,7 +147,7 @@ const Approvals = () => {
                     <th className="dark:text-gray-200">Department</th>
                     <th className="dark:text-gray-200">Type</th>
                     <th className="dark:text-gray-200">Title</th>
-                    <th className="dark:text-gray-200">Assigned Role</th>
+                    <th className="dark:text-gray-200">Current Step</th>
                     <th className="dark:text-gray-200">Status</th>
                     <th className="dark:text-gray-200">Action</th>
                   </tr>
@@ -156,6 +156,8 @@ const Approvals = () => {
                   {changes.map((change) => {
                     const myReview = getMyReview(change);
                     const isReviewed = Boolean(myReview);
+                    const currentStep = getApprovalStep(change);
+                    const progress = getApprovalProgress(change);
 
                     return (
                       <tr key={change.id} className="dark:border-gray-700">
@@ -164,7 +166,16 @@ const Approvals = () => {
                         <td className="dark:text-gray-300">{change.department || '-'}</td>
                         <td className="dark:text-gray-300">{change.type || '-'}</td>
                         <td className="dark:text-gray-300">{change.title || '-'}</td>
-                        <td className="dark:text-gray-300">{getAssignedRoleLabel(change)}</td>
+                        <td className="dark:text-gray-300">
+                          <div className="text-xs">
+                            <p className="font-semibold text-blue-700 dark:text-blue-300">
+                              Step {progress?.approvedCount + 1 || 1}: {currentStep?.name || '-'}
+                            </p>
+                            <p className="text-gray-600 dark:text-gray-400 mt-0.5">
+                              {currentStep?.allowedRoles?.join(' / ') || '-'}
+                            </p>
+                          </div>
+                        </td>
                         <td className="dark:text-gray-300">
                           <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
                             {getWorkflowStatusLabel(change)}

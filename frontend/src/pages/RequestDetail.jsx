@@ -192,54 +192,168 @@ const RequestDetail = () => {
           </div>
 
           <div className="card">
-            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Section 6 - Approval Timeline</h2>
-            <p className="mb-3 text-sm text-blue-700 dark:text-blue-300">Assigned To Role: {getAssignedRoleLabel(request)}</p>
-            <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Current Stage: {getWorkflowStatusLabel(request)}</p>
-            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
-              Approval Progress: {approvedCount}/{approvalProgress?.workflowSteps?.length || 0} steps completed
-            </p>
-            <div className="space-y-2 text-sm">
-              {timelineSteps.map((step, index) => {
-                const isCompleted = completedStages[step.key];
-                const isCurrent = currentStage === step.key;
-                const stepStatus = step.key === 'created'
-                  ? 'Completed'
-                  : isCompleted
-                  ? 'Completed'
-                  : isCurrent
-                  ? 'Current'
-                  : 'Pending';
-                return (
-                <div key={step.key} className="flex items-center gap-3">
-                  <span
-                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${
-                      isCompleted
-                        ? 'bg-green-600 text-white'
-                        : isCurrent
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                    }`}
-                  >
-                    {isCompleted ? '✓' : index + 1}
-                  </span>
-                  <span className={`flex-1 text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
-                    {step.label}
-                    {isCurrent ? ' (Current)' : ''}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                      stepStatus === 'Completed'
+            <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Section 6 - Approval Timeline (Sequential Steps)</h2>
+            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-semibold">⚡ SEQUENTIAL APPROVAL PROCESS</p>
+              <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">Each step must be completed in order. Step 2 cannot be approved until Step 1 is complete.</p>
+            </div>
+
+            {/* APPROVAL WORKFLOW SECTION */}
+            <div className="mb-6">
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-sm">Approval Workflow</h3>
+              <div className="space-y-3">
+                {/* STEP 1: SUPERVISOR REVIEW */}
+                <div className={`p-4 rounded border-2 ${
+                  approvedCount >= 1 
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                    : approvedCount === 0 && request.status === 'Pending'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/20'
+                }`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                      approvedCount >= 1 ? 'bg-green-600' : 'bg-blue-600'
+                    }`}>
+                      {approvedCount >= 1 ? '✓' : '1'}
+                    </span>
+                    <div className="flex-1">
+                      <p className="font-semibold text-gray-800 dark:text-gray-200">Step 1: Supervisor Review</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Requires: Manager Approval</p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      approvedCount >= 1
                         ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
-                        : stepStatus === 'Current'
-                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
-                    }`}
-                  >
-                    {stepStatus}
-                  </span>
+                        : approvedCount === 0 && request.status === 'Pending'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {approvedCount >= 1 ? 'APPROVED' : approvedCount === 0 && request.status === 'Pending' ? 'AWAITING' : 'LOCKED'}
+                    </span>
+                  </div>
+                  {request.approvals && request.approvals.length > 0 && request.approvals[0]?.status === 'Approved' && (
+                    <div className="mt-3 p-2 bg-white dark:bg-gray-900 rounded text-xs space-y-1">
+                      <p className="font-semibold text-gray-700 dark:text-gray-300">✓ Approved by: {request.approvals[0]?.approver?.name || 'Unknown'}</p>
+                      <p className="text-gray-600 dark:text-gray-400">Date: {formatDate(request.approvals[0]?.approved_at)}</p>
+                      {request.approvals[0]?.remarks && <p className="text-gray-600 dark:text-gray-400 italic mt-1">"{request.approvals[0]?.remarks}"</p>}
+                    </div>
+                  )}
+                  {request.status === 'Rejected' && request.approvals && request.approvals[0]?.status === 'Rejected' && (
+                    <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs space-y-1 border border-red-200 dark:border-red-700">
+                      <p className="font-semibold text-red-700 dark:text-red-300">✗ Rejected by: {request.approvals[0]?.approver?.name || 'Unknown'}</p>
+                      <p className="text-red-600 dark:text-red-400">Date: {formatDate(request.approvals[0]?.approved_at)}</p>
+                      {request.approvals[0]?.remarks && <p className="text-red-600 dark:text-red-400 italic mt-1">"{request.approvals[0]?.remarks}"</p>}
+                    </div>
+                  )}
                 </div>
-                );
-              })}
+
+                {/* STEP 2: QUALITY APPROVAL - LOCKED UNTIL STEP 1 COMPLETE */}
+                <div className={`p-4 rounded border-2 transition-all ${
+                  approvedCount >= 2
+                    ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                    : approvedCount >= 1 && request.status === 'Pending'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                    : 'border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/50 opacity-60 cursor-not-allowed'
+                }`}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                      approvedCount >= 2 ? 'bg-green-600' : approvedCount >= 1 ? 'bg-blue-600' : 'bg-gray-400'
+                    }`}>
+                      {approvedCount >= 2 ? '✓' : '2'}
+                    </span>
+                    <div className="flex-1">
+                      <p className={`font-semibold ${approvedCount < 1 ? 'text-gray-500 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                        Step 2: Quality Approval
+                      </p>
+                      <p className={`text-xs ${approvedCount < 1 ? 'text-gray-500 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}>
+                        Requires: Admin or SuperAdmin Approval
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                      approvedCount >= 2
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                        : approvedCount >= 1 && request.status === 'Pending'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-200'
+                        : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                    }`}>
+                      {approvedCount >= 2 ? 'APPROVED' : approvedCount >= 1 ? 'AWAITING' : 'LOCKED'}
+                    </span>
+                  </div>
+                  {approvedCount < 1 && (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 italic mt-2">
+                      🔒 This step is locked. Step 1 (Supervisor Review) must be approved first.
+                    </p>
+                  )}
+                  {request.approvals && request.approvals.length > 1 && request.approvals[1]?.status === 'Approved' && (
+                    <div className="mt-3 p-2 bg-white dark:bg-gray-900 rounded text-xs space-y-1">
+                      <p className="font-semibold text-gray-700 dark:text-gray-300">✓ Approved by: {request.approvals[1]?.approver?.name || 'Unknown'}</p>
+                      <p className="text-gray-600 dark:text-gray-400">Date: {formatDate(request.approvals[1]?.approved_at)}</p>
+                      {request.approvals[1]?.remarks && <p className="text-gray-600 dark:text-gray-400 italic mt-1">"{request.approvals[1]?.remarks}"</p>}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* OPERATIONAL PHASES SECTION */}
+            <div>
+              <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-3 text-sm">Operational Phases</h3>
+              <div className="space-y-2">
+                {timelineSteps.slice(3).map((step, index) => {
+                  const isCompleted = completedStages[step.key];
+                  const isCurrent = currentStage === step.key;
+                  const stepStatus = step.key === 'created'
+                    ? 'Completed'
+                    : isCompleted
+                    ? 'Completed'
+                    : isCurrent
+                    ? 'Current'
+                    : 'Pending';
+                  return (
+                  <div key={step.key} className="flex items-center gap-3 px-3 py-2 rounded">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
+                        isCompleted
+                          ? 'bg-green-600 text-white'
+                          : isCurrent
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                      }`}
+                    >
+                      {isCompleted ? '✓' : index + 4}
+                    </span>
+                    <span className={`flex-1 text-sm text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
+                      {step.label}
+                      {isCurrent ? ' (Current)' : ''}
+                    </span>
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                        stepStatus === 'Completed'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                          : stepStatus === 'Current'
+                          ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                      }`}
+                    >
+                      {stepStatus}
+                    </span>
+                  </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* PROGRESS SUMMARY */}
+            <div className="mt-6 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Approval Progress Summary</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <span className="font-semibold text-gray-700 dark:text-gray-200">{approvedCount}/{approvalProgress?.workflowSteps?.length || 0}</span> approval steps completed
+              </p>
+              <div className="w-full bg-gray-300 dark:bg-gray-700 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full transition-all"
+                  style={{ width: `${(approvedCount / (approvalProgress?.workflowSteps?.length || 1)) * 100}%` }}
+                ></div>
+              </div>
             </div>
           </div>
 

@@ -245,7 +245,8 @@ export const seedCoreData = async () => {
 };
 
 export const ensureTablesFromConfig = async () => {
-  await sequelize.sync({ alter: false });
+  // Use alter: true to add new columns like step_number to Approval table
+  await sequelize.sync({ alter: true });
 };
 
 export const seedDemoDataIfNeeded = async () => {
