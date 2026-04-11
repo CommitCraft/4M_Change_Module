@@ -220,16 +220,28 @@ const Approvals = () => {
                             {workflowSteps.map((step, idx) => {
                               const isCompleted = idx < approvedCount;
                               const isCurrent = idx === approvedCount && !progress.isComplete;
+                              const stepStatus = isCompleted ? 'Completed' : isCurrent ? 'Current' : 'Pending';
 
                               return (
                                 <div key={step.step} className="flex items-center gap-3 text-xs">
                                   <span className={`flex h-6 w-6 items-center justify-center rounded-full font-bold ${isCompleted ? 'bg-green-500 text-white' : isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-700 dark:bg-gray-600 dark:text-gray-200'}`}>
                                     {isCompleted ? '✓' : idx + 1}
                                   </span>
-                                  <span className={`text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
+                                  <span className={`flex-1 text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
                                     {step.name}
                                     {isCurrent ? ' (Current)' : ''}
                                     {progress.isComplete && idx === workflowSteps.length - 1 ? ' (Completed)' : ''}
+                                  </span>
+                                  <span
+                                    className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                      stepStatus === 'Completed'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                                        : stepStatus === 'Current'
+                                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                                    }`}
+                                  >
+                                    {stepStatus}
                                   </span>
                                 </div>
                               );
@@ -378,6 +390,7 @@ const Approvals = () => {
                       {detailsProgress.workflowSteps.map((step, index) => {
                         const isCompleted = index < detailsProgress.approvedCount;
                         const isCurrent = index === detailsProgress.approvedCount && !detailsProgress.isComplete;
+                        const stepStatus = isCompleted ? 'Completed' : isCurrent ? 'Current' : 'Pending';
                         return (
                           <div key={step.step} className="flex items-center gap-3 text-sm">
                             <span
@@ -391,10 +404,21 @@ const Approvals = () => {
                             >
                               {isCompleted ? '✓' : index + 1}
                             </span>
-                            <span className={`text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
+                            <span className={`flex-1 text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
                               {step.name}
                               {isCurrent ? ' (Current)' : ''}
                               {detailsProgress.isComplete && index === detailsProgress.workflowSteps.length - 1 ? ' (Completed)' : ''}
+                            </span>
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                stepStatus === 'Completed'
+                                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                                  : stepStatus === 'Current'
+                                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                                  : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                              }`}
+                            >
+                              {stepStatus}
                             </span>
                           </div>
                         );

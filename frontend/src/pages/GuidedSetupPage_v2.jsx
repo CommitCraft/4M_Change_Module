@@ -176,7 +176,7 @@ const GuidedSetupPageV2 = () => {
     const loadMasters = async () => {
       try {
         const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes] = await Promise.all([
-          departmentService.getAll(),
+          departmentService.getAll({ status: 'Active' }),
           productionLineService.getAll(),
           machineService.getAll(),
           changeSubTypeService.getAll(),

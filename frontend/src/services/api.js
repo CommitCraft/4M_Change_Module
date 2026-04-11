@@ -101,7 +101,7 @@ export const fileService = {
 
 // Individual master data services
 export const departmentService = {
-  getAll: () => api.get('/departments'),
+  getAll: (filters = {}) => api.get('/departments', { params: filters }),
   create: (payload) => withConfirmation('Create department?', () => api.post('/departments', payload)),
   update: (id, payload) => withConfirmation('Update department?', () => api.put(`/departments/${id}`, payload)),
   delete: (id) => withConfirmation('Delete department?', () => api.delete(`/departments/${id}`)),

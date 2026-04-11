@@ -15,6 +15,9 @@ const INITIAL_FORM = {
   department_id: '',
 };
 
+const formatDepartmentLabel = (department) =>
+  department?.four_m_link ? `${department.name} (${department.four_m_link})` : department?.name || '-';
+
 const Users = () => {
   const { user: currentUser, hasPermission } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -64,7 +67,7 @@ const Users = () => {
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
-        const response = await departmentService.getAll();
+        const response = await departmentService.getAll({ status: 'Active' });
         const rows = response.data.data || [];
         setDepartments(rows);
       } catch (error) {
@@ -248,7 +251,7 @@ const Users = () => {
                 <option value="All">All Departments</option>
                 {departments.map((department) => (
                   <option key={department.id} value={department.id}>
-                    {department.name}
+                    {formatDepartmentLabel(department)}
                   </option>
                 ))}
               </select>
@@ -385,7 +388,7 @@ const Users = () => {
               <option value="">Select Department</option>
               {visibleDepartments.map((department) => (
                 <option key={department.id} value={department.id}>
-                  {department.name}
+                  {formatDepartmentLabel(department)}
                 </option>
               ))}
             </select>
@@ -489,7 +492,7 @@ const Users = () => {
               <option value="">Select Department</option>
               {visibleDepartments.map((department) => (
                 <option key={department.id} value={department.id}>
-                  {department.name}
+                  {formatDepartmentLabel(department)}
                 </option>
               ))}
             </select>

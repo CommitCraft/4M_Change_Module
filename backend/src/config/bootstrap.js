@@ -5,12 +5,48 @@ import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
 
 const { Role, RolePermission, User, ChangeRequest, AuditLog, MasterData, Department, BusinessRole } = models;
 
-const ALL_ROLES = ['SuperAdmin', 'Admin', 'Manager', 'User'];
+const ALL_ROLES = [
+  'SuperAdmin',
+  'Admin',
+  'Manager',
+  'User',
+  'ManUser',
+  'MachineUser',
+  'MethodUser',
+  'MaterialUser',
+  'GeneralUser',
+];
+
+const DEFAULT_DEPARTMENTS = [
+  { name: 'Production Department', four_m_link: 'Man,Method' },
+  { name: 'Quality Department (QA/QC)', four_m_link: 'Material,Method' },
+  { name: 'Maintenance Department', four_m_link: 'Machine' },
+  { name: 'Store / Inventory Department', four_m_link: 'Material' },
+  { name: 'Purchase / Procurement Department', four_m_link: 'Material' },
+  { name: 'R&D / Design Department', four_m_link: 'Method' },
+  { name: 'Process / Industrial Engineering (IE)', four_m_link: 'Method' },
+  { name: 'HR (Human Resource)', four_m_link: 'Man' },
+  { name: 'Finance / Accounts', four_m_link: '' },
+  { name: 'Logistics / Supply Chain', four_m_link: '' },
+  { name: 'EHS (Environment, Health & Safety)', four_m_link: '' },
+  { name: 'Continuous Improvement (CI / Lean Team)', four_m_link: '' },
+];
+
+const LEGACY_DEPARTMENTS_TO_INACTIVATE = ['Production', 'Quality', 'Maintenance', 'HR'];
 
 const DEFAULT_MASTER_DATA = [
-  { category: 'department', name: 'Production' },
-  { category: 'department', name: 'Quality' },
-  { category: 'department', name: 'Maintenance' },
+  { category: 'department', name: 'Production Department' },
+  { category: 'department', name: 'Quality Department (QA/QC)' },
+  { category: 'department', name: 'Maintenance Department' },
+  { category: 'department', name: 'Store / Inventory Department' },
+  { category: 'department', name: 'Purchase / Procurement Department' },
+  { category: 'department', name: 'R&D / Design Department' },
+  { category: 'department', name: 'Process / Industrial Engineering (IE)' },
+  { category: 'department', name: 'HR (Human Resource)' },
+  { category: 'department', name: 'Finance / Accounts' },
+  { category: 'department', name: 'Logistics / Supply Chain' },
+  { category: 'department', name: 'EHS (Environment, Health & Safety)' },
+  { category: 'department', name: 'Continuous Improvement (CI / Lean Team)' },
   { category: 'machine', name: 'MCH-1001' },
   { category: 'machine', name: 'MCH-1002' },
   { category: 'risk_level', name: 'Low' },
@@ -128,6 +164,25 @@ export const seedCoreData = async () => {
     });
   }
 
+  for (const department of DEFAULT_DEPARTMENTS) {
+    await Department.findOrCreate({
+      where: { name: department.name },
+      defaults: {
+        name: department.name,
+        status: 'Active',
+      },
+    });
+  }
+
+  await Department.update(
+    { status: 'Inactive' },
+    {
+      where: {
+        name: LEGACY_DEPARTMENTS_TO_INACTIVATE,
+      },
+    }
+  );
+
   const superAdminEmail = process.env.SUPERADMIN_EMAIL;
   const superAdminPassword = process.env.SUPERADMIN_PASSWORD;
 
@@ -204,19 +259,22 @@ export const seedDemoDataIfNeeded = async () => {
   const adminRole = await Role.findOne({ where: { name: 'Admin' } });
   const managerRole = await Role.findOne({ where: { name: 'Manager' } });
   const userRole = await Role.findOne({ where: { name: 'User' } });
+  const manUserRole = await Role.findOne({ where: { name: 'ManUser' } });
+  const machineUserRole = await Role.findOne({ where: { name: 'MachineUser' } });
+  const methodUserRole = await Role.findOne({ where: { name: 'MethodUser' } });
+  const materialUserRole = await Role.findOne({ where: { name: 'MaterialUser' } });
+  const generalUserRole = await Role.findOne({ where: { name: 'GeneralUser' } });
 
-  const [adminUser] = await Promise.all([
-    User.scope('withPassword').findOrCreate({
-      where: { email: 'admin@example.com' },
-      defaults: {
-        name: 'Plant Admin',
-        email: 'admin@example.com',
-        password: 'Password@123',
-        role_id: adminRole.id,
-        department_id: qualityDept?.id || null,
-      },
-    }),
-  ]);
+  const [adminUser] = await User.scope('withPassword').findOrCreate({
+    where: { email: 'admin@example.com' },
+    defaults: {
+      name: 'Plant Admin',
+      email: 'admin@example.com',
+      password: 'Password@123',
+      role_id: adminRole.id,
+      department_id: qualityDept?.id || null,
+    },
+  });
 
   await User.scope('withPassword').findOrCreate({
     where: { email: 'manager@example.com' },
@@ -258,6 +316,61 @@ export const seedDemoDataIfNeeded = async () => {
       email: 'manager.approver@example.com',
       password: 'Password@123',
       role_id: managerRole.id,
+      department_id: productionDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'man.user@example.com' },
+    defaults: {
+      name: '4M Man User',
+      email: 'man.user@example.com',
+      password: 'Password@123',
+      role_id: manUserRole?.id || userRole.id,
+      department_id: productionDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'machine.user@example.com' },
+    defaults: {
+      name: '4M Machine User',
+      email: 'machine.user@example.com',
+      password: 'Password@123',
+      role_id: machineUserRole?.id || userRole.id,
+      department_id: maintenanceDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'method.user@example.com' },
+    defaults: {
+      name: '4M Method User',
+      email: 'method.user@example.com',
+      password: 'Password@123',
+      role_id: methodUserRole?.id || userRole.id,
+      department_id: qualityDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'material.user@example.com' },
+    defaults: {
+      name: '4M Material User',
+      email: 'material.user@example.com',
+      password: 'Password@123',
+      role_id: materialUserRole?.id || userRole.id,
+      department_id: qualityDept?.id || null,
+    },
+  });
+
+  await User.scope('withPassword').findOrCreate({
+    where: { email: 'general.user@example.com' },
+    defaults: {
+      name: '4M General User',
+      email: 'general.user@example.com',
+      password: 'Password@123',
+      role_id: generalUserRole?.id || userRole.id,
       department_id: productionDept?.id || null,
     },
   });

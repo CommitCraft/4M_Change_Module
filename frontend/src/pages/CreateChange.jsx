@@ -118,7 +118,7 @@ const CreateChange = () => {
   const loadMasters = useCallback(async () => {
     try {
       const [departmentsRes, productionLinesRes, machinesRes, subtypesRes, operatorsRes, skillsRes, operatorSkillMapsRes, machineSkillRequirementsRes, trainingProgramsRes, typeRequirementsRes, typeActionTemplatesRes, riskLevelsRes, businessRolesRes] = await Promise.all([
-        departmentService.getAll(),
+        departmentService.getAll({ status: 'Active' }),
         productionLineService.getAll(),
         machineService.getAll(),
         changeSubTypeService.getAll(),
@@ -132,7 +132,11 @@ const CreateChange = () => {
         riskLevelService.getAll(),
         businessRoleService.getAll({ status: 'Active' }),
       ]);
-      const departments = (departmentsRes.data.data || []).map((r) => r.name);
+      const departments = (departmentsRes.data.data || []).map((r) => ({
+        id: r.id,
+        name: r.name,
+        four_m_link: r.four_m_link || '',
+      }));
       const productionLines = (productionLinesRes.data.data || []).map((r) => r.name);
       const machines = (machinesRes.data.data || []).map((r) => r.name);
       const subtypes = subtypesRes.data.data || [];
@@ -419,7 +423,10 @@ const CreateChange = () => {
                 <select name="department" value={formData.department} onChange={handleChange} className="input-field dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600" required>
                   <option value="">Select department</option>
                   {departmentOptions.map((item) => (
-                    <option key={item} value={item}>{item}</option>
+                    <option key={item.id || item.name} value={item.name}>
+                      {item.name}
+                      {item.four_m_link ? ` (${item.four_m_link})` : ''}
+                    </option>
                   ))}
                 </select>
               </div>

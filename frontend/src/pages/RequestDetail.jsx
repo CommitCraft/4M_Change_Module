@@ -4,7 +4,7 @@ import { changeRequestService, fileService } from '../services/api';
 import { formatDate, showError } from '../utils/helpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
-import { getAssignedRoleLabel, getWorkflowStatusLabel } from '../utils/approvalWorkflow';
+import { getAssignedRoleLabel, getWorkflowStatusLabel, getApprovalProgress } from '../utils/approvalWorkflow';
 
 const timelineSteps = [
   { key: 'created', label: 'Request Created' },
@@ -65,18 +65,19 @@ const RequestDetail = () => {
     return <div className="text-center py-10">Request not found</div>;
   }
 
-  const approvedCount = request.approvals?.filter((a) => a.status === 'Approved').length || 0;
+  const approvalProgress = getApprovalProgress(request);
+  const approvedCount = approvalProgress?.approvedCount || 0;
   const currentStage =
-    request.status === 'Closed'
+    request.current_stage_step === 1
+      ? 'review'
+      : request.current_stage_step === 2
+      ? 'approval'
+      : request.status === 'Closed'
       ? 'closed'
       : request.status === 'Implemented'
       ? 'monitoring'
       : request.status === 'Approved'
       ? 'implementation'
-      : request.status === 'Rejected'
-      ? approvedCount >= 1
-        ? 'approval'
-        : 'review'
       : approvedCount === 0
       ? 'review'
       : 'approval';
@@ -194,10 +195,20 @@ const RequestDetail = () => {
             <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-200">Section 6 - Approval Timeline</h2>
             <p className="mb-3 text-sm text-blue-700 dark:text-blue-300">Assigned To Role: {getAssignedRoleLabel(request)}</p>
             <p className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">Current Stage: {getWorkflowStatusLabel(request)}</p>
+            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+              Approval Progress: {approvedCount}/{approvalProgress?.workflowSteps?.length || 0} steps completed
+            </p>
             <div className="space-y-2 text-sm">
               {timelineSteps.map((step, index) => {
                 const isCompleted = completedStages[step.key];
                 const isCurrent = currentStage === step.key;
+                const stepStatus = step.key === 'created'
+                  ? 'Completed'
+                  : isCompleted
+                  ? 'Completed'
+                  : isCurrent
+                  ? 'Current'
+                  : 'Pending';
                 return (
                 <div key={step.key} className="flex items-center gap-3">
                   <span
@@ -211,9 +222,20 @@ const RequestDetail = () => {
                   >
                     {isCompleted ? '✓' : index + 1}
                   </span>
-                  <span className={`text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
+                  <span className={`flex-1 text-gray-700 dark:text-gray-300 ${isCurrent ? 'font-semibold' : ''}`}>
                     {step.label}
                     {isCurrent ? ' (Current)' : ''}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                      stepStatus === 'Completed'
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-200'
+                        : stepStatus === 'Current'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+                    }`}
+                  >
+                    {stepStatus}
                   </span>
                 </div>
                 );

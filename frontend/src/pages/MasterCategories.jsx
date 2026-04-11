@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { FOUR_M_CATEGORIES, FOUR_M_TYPES, getSubCategoriesByType } from '../utils/changeCategories';
-import { businessRoleService } from '../services/api';
+import { businessRoleService, departmentService } from '../services/api';
 import { showError } from '../utils/helpers';
 
 const MasterCategories = () => {
@@ -12,6 +12,7 @@ const MasterCategories = () => {
   const [roleModule, setRoleModule] = useState('Man');
   const [businessRoles, setBusinessRoles] = useState([]);
   const [selectedBusinessRole, setSelectedBusinessRole] = useState('');
+  const [departments, setDepartments] = useState([]);
 
   const dropdownOptions = useMemo(() => getSubCategoriesByType(dropdownType), [dropdownType]);
   const [dropdownSubCategory, setDropdownSubCategory] = useState(dropdownOptions[0] || '');
@@ -33,6 +34,20 @@ const MasterCategories = () => {
     };
 
     fetchBusinessRoles();
+  }, []);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const response = await departmentService.getAll({ status: 'Active' });
+        setDepartments(response?.data?.data || []);
+      } catch (error) {
+        showError('Failed to load departments');
+        setDepartments([]);
+      }
+    };
+
+    fetchDepartments();
   }, []);
 
   useEffect(() => {
@@ -172,6 +187,23 @@ const MasterCategories = () => {
                 {roleOptions.find((role) => role.role_name === selectedBusinessRole)?.focus_area || '-'}
               </p>
             )}
+          </div>
+
+          <div className="card">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-4">Departments (Live API)</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {departments.map((department) => (
+                <div
+                  key={department.id}
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3"
+                >
+                  <p className="font-semibold text-gray-800 dark:text-gray-100">{department.name}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                    4M Link: {department.four_m_link || '-'}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>

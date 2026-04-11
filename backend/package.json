@@ -7,7 +7,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js | tee nodemon.log",
-    "test": "echo \"No tests configured yet\""
+    "test": "echo \"No tests configured yet\"",
+    "smoke:roles": "node scripts/roleAccessSmoke.js"
   },
   "keywords": ["4m", "manufacturing", "change", "management"],
   "author": "",

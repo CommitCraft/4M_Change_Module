@@ -87,6 +87,34 @@ export const ALL_PERMISSIONS = [
 
 export const ADMIN_MANDATORY_PERMISSIONS = ['dashboard.view', 'changes.read', 'approvals.read'];
 
+const FOUR_M_BASE_PERMISSIONS = [
+  'dashboard.view',
+  'changes.read',
+  'changes.create',
+  'changes.update',
+  'approvals.read',
+  'attachments.read',
+  'attachments.upload',
+  'masters.department.read',
+  'masters.machine.read',
+  'masters.productionline.read',
+  'masters.skill.read',
+  'masters.risk_level.read',
+  'masters.operator.read',
+  'masters.change_subtype.read',
+  'masters.operator_skill_map.read',
+  'masters.machine_skill_requirement.read',
+  'masters.method_skill_map.read',
+  'masters.material_skill_map.read',
+  'masters.training_program.read',
+  'masters.type_requirement.read',
+  'masters.type_action_template.read',
+  'guidedsetup.man.read',
+  'guidedsetup.machine.read',
+  'guidedsetup.method.read',
+  'guidedsetup.material.read',
+];
+
 export const DEFAULT_ROLE_PERMISSIONS = {
   SuperAdmin: ALL_PERMISSIONS,
   Admin: [
@@ -239,4 +267,9 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     'guidedsetup.method.read',
     'guidedsetup.material.read',
   ],
+  ManUser: [...FOUR_M_BASE_PERMISSIONS],
+  MachineUser: [...FOUR_M_BASE_PERMISSIONS],
+  MethodUser: [...FOUR_M_BASE_PERMISSIONS],
+  MaterialUser: [...FOUR_M_BASE_PERMISSIONS],
+  GeneralUser: [...FOUR_M_BASE_PERMISSIONS],
 };
