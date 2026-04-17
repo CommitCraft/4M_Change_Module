@@ -50,6 +50,15 @@ Default backend URL:
 Default frontend URL:
 - http://localhost:5174
 
+## 3.2.1 Frontend Network/LAN Setup
+
+If backend is running on another machine in same network, set frontend env values like:
+
+- `VITE_API_BASE_URL=http://192.168.1.33:5000/api`
+- `VITE_DEV_API_PROXY_TARGET=http://192.168.1.33:5000`
+
+Then restart frontend dev server.
+
 ## 3.3 Demo Users
 
 If `SEED_DEMO_DATA=true` in backend env, sample accounts from `backend/TEST_LOGINS.md` are created.
