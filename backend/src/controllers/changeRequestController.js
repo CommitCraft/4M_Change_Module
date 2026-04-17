@@ -428,8 +428,9 @@ export const deleteChangeRequest = async (req, res) => {
 export const getDashboardStats = async (req, res) => {
   try {
     const where = {};
+    const canApprove = Array.isArray(req.user.permissions) && req.user.permissions.includes('approvals.approve');
 
-    if (req.user.role !== 'SuperAdmin' && req.user.department) {
+    if (req.user.role !== 'SuperAdmin' && req.user.department && !canApprove) {
       where.department = req.user.department;
     }
 

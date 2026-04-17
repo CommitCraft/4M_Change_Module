@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import { DataTypes } from 'sequelize';
 import sequelize, { connectDatabase } from './database.js';
 import models from '../models/index.js';
 import { DEFAULT_ROLE_PERMISSIONS } from '../utils/permissions.js';
@@ -253,17 +254,37 @@ export const seedCoreData = async () => {
 };
 
 export const ensureTablesFromConfig = async () => {
-  // Use alter: true to add new columns like step_number to Approval table
-  await sequelize.sync({ alter: true });
+  // Keep startup sync non-destructive to avoid index/key explosion on MySQL.
+  await sequelize.sync({ alter: false });
+
+  // Targeted schema patch: ensure approvals.step_number exists.
+  const queryInterface = sequelize.getQueryInterface();
+  const approvalsTable = await queryInterface.describeTable('approvals');
+
+  if (!approvalsTable.step_number) {
+    await queryInterface.addColumn('approvals', 'step_number', {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'Workflow step number (1, 2, etc.) for sequential tracking',
+    });
+  }
 };
 
 export const seedDemoDataIfNeeded = async () => {
   const shouldSeedDemo = process.env.SEED_DEMO_DATA === 'true';
   if (!shouldSeedDemo) return;
 
-  const qualityDept = await Department.findOne({ where: { name: 'Quality' } });
-  const productionDept = await Department.findOne({ where: { name: 'Production' } });
-  const maintenanceDept = await Department.findOne({ where: { name: 'Maintenance' } });
+  const findDepartmentByNames = async (names = []) => {
+    for (const name of names) {
+      const department = await Department.findOne({ where: { name } });
+      if (department) return department;
+    }
+    return null;
+  };
+
+  const qualityDept = await findDepartmentByNames(['Quality Department (QA/QC)', 'Quality']);
+  const productionDept = await findDepartmentByNames(['Production Department', 'Production']);
+  const maintenanceDept = await findDepartmentByNames(['Maintenance Department', 'Maintenance']);
 
   const adminRole = await Role.findOne({ where: { name: 'Admin' } });
   const managerRole = await Role.findOne({ where: { name: 'Manager' } });
@@ -285,7 +306,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!adminUser.department_id && qualityDept?.id) {
+    await adminUser.update({ department_id: qualityDept.id });
+  }
+
+  const [managerUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'manager@example.com' },
     defaults: {
       name: 'Line Manager',
@@ -296,7 +321,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!managerUser.department_id && productionDept?.id) {
+    await managerUser.update({ department_id: productionDept.id });
+  }
+
+  const [operatorUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'user@example.com' },
     defaults: {
       name: 'Operator User',
@@ -307,7 +336,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!operatorUser.department_id && maintenanceDept?.id) {
+    await operatorUser.update({ department_id: maintenanceDept.id });
+  }
+
+  const [qualityApprover] = await User.scope('withPassword').findOrCreate({
     where: { email: 'quality.approver@example.com' },
     defaults: {
       name: 'Quality Approver',
@@ -318,7 +351,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!qualityApprover.department_id && qualityDept?.id) {
+    await qualityApprover.update({ department_id: qualityDept.id });
+  }
+
+  const [managerApprover] = await User.scope('withPassword').findOrCreate({
     where: { email: 'manager.approver@example.com' },
     defaults: {
       name: 'Manager Approver',
@@ -329,7 +366,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!managerApprover.department_id && productionDept?.id) {
+    await managerApprover.update({ department_id: productionDept.id });
+  }
+
+  const [manUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'man.user@example.com' },
     defaults: {
       name: '4M Man User',
@@ -340,7 +381,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!manUser.department_id && productionDept?.id) {
+    await manUser.update({ department_id: productionDept.id });
+  }
+
+  const [machineUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'machine.user@example.com' },
     defaults: {
       name: '4M Machine User',
@@ -351,7 +396,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!machineUser.department_id && maintenanceDept?.id) {
+    await machineUser.update({ department_id: maintenanceDept.id });
+  }
+
+  const [methodUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'method.user@example.com' },
     defaults: {
       name: '4M Method User',
@@ -362,7 +411,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!methodUser.department_id && qualityDept?.id) {
+    await methodUser.update({ department_id: qualityDept.id });
+  }
+
+  const [materialUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'material.user@example.com' },
     defaults: {
       name: '4M Material User',
@@ -373,7 +426,11 @@ export const seedDemoDataIfNeeded = async () => {
     },
   });
 
-  await User.scope('withPassword').findOrCreate({
+  if (!materialUser.department_id && qualityDept?.id) {
+    await materialUser.update({ department_id: qualityDept.id });
+  }
+
+  const [generalUser] = await User.scope('withPassword').findOrCreate({
     where: { email: 'general.user@example.com' },
     defaults: {
       name: '4M General User',
@@ -383,6 +440,10 @@ export const seedDemoDataIfNeeded = async () => {
       department_id: productionDept?.id || null,
     },
   });
+
+  if (!generalUser.department_id && productionDept?.id) {
+    await generalUser.update({ department_id: productionDept.id });
+  }
 
   const [sampleRequest] = await ChangeRequest.findOrCreate({
     where: { title: 'Conveyor Motor Upgrade' },

@@ -101,6 +101,8 @@ const Dashboard = () => {
     return scopedDepartments.length > 0 ? scopedDepartments : departmentOptions;
   }, [departmentOptions, user?.department, user?.role]);
 
+  const showSummaryMetrics = ['Manager', 'Admin', 'SuperAdmin'].includes(user?.role);
+
   const fetchStats = async () => {
     try {
       const [statsRes, recentRes, pendingRes] = await Promise.allSettled([
@@ -282,41 +284,49 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-          <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-            <h3 className="text-lg font-semibold">Total Change Requests</h3>
-            <p className="text-3xl font-bold mt-2">{stats?.total || 0}</p>
-          </div>
-          <div className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white">
-            <h3 className="text-lg font-semibold">Pending Review</h3>
-            <p className="text-3xl font-bold mt-2">{pendingSplit.pendingReview}</p>
-          </div>
-          <div className="card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <h3 className="text-lg font-semibold">Pending Approval</h3>
-            <p className="text-3xl font-bold mt-2">{pendingSplit.pendingApproval}</p>
-          </div>
-          <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
-            <h3 className="text-lg font-semibold">Implemented Changes</h3>
-            <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Implemented || 0}</p>
-          </div>
-          <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
-            <h3 className="text-lg font-semibold">Rejected Changes</h3>
-            <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Rejected || 0}</p>
-          </div>
-          <div className="card bg-gradient-to-br from-slate-600 to-slate-700 text-white">
-            <h3 className="text-lg font-semibold">Closed Requests</h3>
-            <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Closed || 0}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 mb-6">
-          <div className="card">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">4M Changes Distribution</h3>
-            <div className="max-w-md mx-auto">
-              <Pie data={typeData} />
+        {showSummaryMetrics ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+            <div className="card bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+              <h3 className="text-lg font-semibold">Total Change Requests</h3>
+              <p className="text-3xl font-bold mt-2">{stats?.total || 0}</p>
+            </div>
+            <div className="card bg-gradient-to-br from-amber-500 to-amber-600 text-white">
+              <h3 className="text-lg font-semibold">Pending Review</h3>
+              <p className="text-3xl font-bold mt-2">{pendingSplit.pendingReview}</p>
+            </div>
+            <div className="card bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+              <h3 className="text-lg font-semibold">Pending Approval</h3>
+              <p className="text-3xl font-bold mt-2">{pendingSplit.pendingApproval}</p>
+            </div>
+            <div className="card bg-gradient-to-br from-green-500 to-green-600 text-white">
+              <h3 className="text-lg font-semibold">Implemented Changes</h3>
+              <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Implemented || 0}</p>
+            </div>
+            <div className="card bg-gradient-to-br from-red-500 to-red-600 text-white">
+              <h3 className="text-lg font-semibold">Rejected Changes</h3>
+              <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Rejected || 0}</p>
+            </div>
+            <div className="card bg-gradient-to-br from-slate-600 to-slate-700 text-white">
+              <h3 className="text-lg font-semibold">Closed Requests</h3>
+              <p className="text-3xl font-bold mt-2">{stats?.byStatus?.Closed || 0}</p>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-8 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+            Summary metrics are limited to Manager, Admin, and SuperAdmin roles. You can still review the recent changes list below.
+          </div>
+        )}
+
+        {showSummaryMetrics && (
+          <div className="grid grid-cols-1 gap-6 mb-6">
+            <div className="card">
+              <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">4M Changes Distribution</h3>
+              <div className="max-w-md mx-auto">
+                <Pie data={typeData} />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Recent Changes</h3>
