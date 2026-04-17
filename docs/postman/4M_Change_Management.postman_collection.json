@@ -1,0 +1,646 @@
+{
+  "info": {
+    "name": "4M Change Management API",
+    "description": "Collection for 4M Module backend APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:5000/api" },
+    { "key": "token", "value": "" },
+    { "key": "changeRequestId", "value": "1" },
+    { "key": "approvalId", "value": "1" },
+    { "key": "userId", "value": "1" },
+    { "key": "roleId", "value": "1" },
+    { "key": "masterId", "value": "1" },
+    { "key": "attachmentId", "value": "1" },
+    { "key": "filename", "value": "sample.pdf" },
+    { "key": "flowType", "value": "Man" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:5000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "01 Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.environment.set('token', json.data.token);",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 Change Requests",
+      "item": [
+        {
+          "name": "Create Change Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Machine\",\n  \"title\": \"Fixture replacement\",\n  \"description\": \"Replace fixture for stability\",\n  \"current_state\": \"Old fixture with wear\",\n  \"proposed_change\": \"Install new fixture model\",\n  \"reason\": \"High vibration and quality drift\",\n  \"impact_analysis\": \"Improves repeatability\",\n  \"risk_level\": \"Medium\",\n  \"department\": \"Production\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/change-requests",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests"]
+            }
+          }
+        },
+        {
+          "name": "List Change Requests",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/change-requests?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Change Request By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/change-requests/{{changeRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests", "{{changeRequestId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Change Request",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Implemented\",\n  \"monitoring_period\": \"30 Days\",\n  \"monitoring_comments\": \"Initial monitoring is stable\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/change-requests/{{changeRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests", "{{changeRequestId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Change Request",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/change-requests/{{changeRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests", "{{changeRequestId}}"]
+            }
+          }
+        },
+        {
+          "name": "Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/change-requests/dashboard/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["change-requests", "dashboard", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 Approvals",
+      "item": [
+        {
+          "name": "Create Approval",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": {{changeRequestId}},\n  \"status\": \"Approved\",\n  \"remarks\": \"Approved from Postman\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/approvals",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals"]
+            }
+          }
+        },
+        {
+          "name": "Change Approval",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"request_id\": {{changeRequestId}},\n  \"approval_id\": {{approvalId}},\n  \"status\": \"Rejected\",\n  \"remarks\": \"Need more details\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/approvals/{{approvalId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "{{approvalId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Approvals By Request",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/approvals/{{changeRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["approvals", "{{changeRequestId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"QA User\",\n  \"email\": \"qa.user@example.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"User\",\n  \"department_id\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"]
+            }
+          }
+        },
+        {
+          "name": "Update Own Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update User By ID",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated QA User\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "{{userId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Get Role By ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ShiftLead\",\n  \"permissions\": [\"changes.read\", \"changes.update\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles"]
+            }
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ShiftLeadUpdated\",\n  \"permissions\": [\"changes.read\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/roles/{{roleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["roles", "{{roleId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 Files",
+      "item": [
+        {
+          "name": "Get Attachments By Request",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/files/request/{{changeRequestId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "request", "{{changeRequestId}}"]
+            }
+          }
+        },
+        {
+          "name": "Upload Attachment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/files/{{changeRequestId}}/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "{{changeRequestId}}", "upload"]
+            }
+          }
+        },
+        {
+          "name": "Download Attachment",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/files/{{filename}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "{{filename}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Attachment",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/files/{{attachmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["files", "{{attachmentId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 Guided Setup",
+      "item": [
+        {
+          "name": "Get Guided Setup Progress",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/guided-setup/{{flowType}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guided-setup", "{{flowType}}"]
+            }
+          }
+        },
+        {
+          "name": "Save Guided Setup Progress",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"completed_steps\": [1, 2],\n  \"current_step_index\": 2,\n  \"draft_forms\": {\n    \"step1\": {\n      \"sample\": \"value\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/guided-setup/{{flowType}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guided-setup", "{{flowType}}"]
+            }
+          }
+        },
+        {
+          "name": "Reset Guided Setup Progress",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/guided-setup/{{flowType}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["guided-setup", "{{flowType}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 Generic Masters",
+      "item": [
+        {
+          "name": "Get Masters By Category",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/masters?category=department&status=Active",
+              "host": ["{{baseUrl}}"],
+              "path": ["masters"],
+              "query": [
+                { "key": "category", "value": "department" },
+                { "key": "status", "value": "Active" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Master",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"department\",\n  \"name\": \"Quality\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/masters",
+              "host": ["{{baseUrl}}"],
+              "path": ["masters"]
+            }
+          }
+        },
+        {
+          "name": "Update Master",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"department\",\n  \"name\": \"Quality Updated\",\n  \"status\": \"Active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/masters/{{masterId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["masters", "{{masterId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Master",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/masters/{{masterId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["masters", "{{masterId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 Specific Masters",
+      "item": [
+        {
+          "name": "Departments - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/departments", "host": ["{{baseUrl}}"], "path": ["departments"] } }
+        },
+        {
+          "name": "Production Lines - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/production-lines", "host": ["{{baseUrl}}"], "path": ["production-lines"] } }
+        },
+        {
+          "name": "Machines - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/machines", "host": ["{{baseUrl}}"], "path": ["machines"] } }
+        },
+        {
+          "name": "Change Subtypes - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/change-subtypes", "host": ["{{baseUrl}}"], "path": ["change-subtypes"] } }
+        },
+        {
+          "name": "Operators - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/operators", "host": ["{{baseUrl}}"], "path": ["operators"] } }
+        },
+        {
+          "name": "Skills - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/skills", "host": ["{{baseUrl}}"], "path": ["skills"] } }
+        },
+        {
+          "name": "Operator Skill Maps - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/operator-skill-maps", "host": ["{{baseUrl}}"], "path": ["operator-skill-maps"] } }
+        },
+        {
+          "name": "Machine Skill Requirements - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/machine-skill-requirements", "host": ["{{baseUrl}}"], "path": ["machine-skill-requirements"] } }
+        },
+        {
+          "name": "Training Programs - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/training-programs", "host": ["{{baseUrl}}"], "path": ["training-programs"] } }
+        },
+        {
+          "name": "Type Requirements - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/type-requirements", "host": ["{{baseUrl}}"], "path": ["type-requirements"] } }
+        },
+        {
+          "name": "Type Action Templates - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/type-action-templates", "host": ["{{baseUrl}}"], "path": ["type-action-templates"] } }
+        },
+        {
+          "name": "Monitoring Periods - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/monitoring-periods", "host": ["{{baseUrl}}"], "path": ["monitoring-periods"] } }
+        },
+        {
+          "name": "Risk Levels - List",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/risk-levels", "host": ["{{baseUrl}}"], "path": ["risk-levels"] } }
+        }
+      ]
+    },
+    {
+      "name": "10 Business Roles",
+      "item": [
+        {
+          "name": "List Business Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/business-roles?m_module=Man&status=Active",
+              "host": ["{{baseUrl}}"],
+              "path": ["business-roles"],
+              "query": [
+                { "key": "m_module", "value": "Man" },
+                { "key": "status", "value": "Active" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
